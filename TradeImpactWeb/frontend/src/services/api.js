@@ -57,6 +57,22 @@ export const subscriptions = {
   getAll: () => 
     api.get('/subscriptions'),
   
+  getUserSubscriptions: (username) =>
+    api.get(`/subscriptions/user/${username}`),
+  
+  getActiveSubscriptions: (username) =>
+    api.get(`/subscriptions/user/${username}/active`),
+  
+  create: (username, classId) =>
+    api.post('/subscriptions', { username, classId }),
+  
+  delete: (subscriptionId) =>
+    api.delete(`/subscriptions/${subscriptionId}`),
+  
+  deleteByClassId: (username, classId) =>
+    api.delete(`/subscriptions/${username}/${classId}`),
+  
+  // Legacy endpoints (kept for compatibility)
   subscribe: (className) => 
     api.post(`/subscriptions/${className}`),
   

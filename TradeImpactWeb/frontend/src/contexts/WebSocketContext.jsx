@@ -152,6 +152,20 @@ export const WebSocketProvider = ({ children }) => {
     setIsConnected(false);
   }, []);
 
+  const removeClassData = useCallback((classId) => {
+    console.log('🗑️ Removing data for classId:', classId);
+    
+    // Remove from marketData
+    setMarketData(prev => {
+      const newData = { ...prev };
+      delete newData[classId];
+      return newData;
+    });
+    
+    // Remove from allMessages
+    setAllMessages(prev => prev.filter(msg => msg.classId !== classId));
+  }, []);
+
   const addMessageHandler = useCallback((handler) => {
     messageHandlers.current.add(handler);
     console.log('➕ Handler aggiunto - Totale handler:', messageHandlers.current.size);
@@ -182,6 +196,7 @@ export const WebSocketProvider = ({ children }) => {
     error,
     connect,
     disconnect,
+    removeClassData,
     addMessageHandler
   };
 

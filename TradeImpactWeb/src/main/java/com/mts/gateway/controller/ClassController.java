@@ -97,8 +97,9 @@ public class ClassController {
                     failureCount++;
                 } else {
                     // Start subscription
+                    String username = request.getUsername() != null ? request.getUsername() : "default-user";
                     subscriptionService.createSubscription(
-                        "default-user",  // TODO: get from security context
+                        username,
                         classId
                     );
                     
@@ -158,12 +159,12 @@ public class ClassController {
                     result.put("message", "Class not found");
                     failureCount++;
                 } else {
-                    // Stop subscription - find and delete by username and classId
-                    var subscriptions = subscriptionService.getUserSubscriptions("default-user");
-                    subscriptions.stream()
-                        .filter(s -> s.getClassId().equals(classId))
-                        .findFirst()
-                        .ifPresent(s -> subscriptionService.deleteSubscription(s.getId()));
+                    // Stop subscription - delete by username and classId
+                    try {
+                        subscriptionService.deleteSubscription("default-user", classId);
+                    } catch (IllegalArgumentException e) {
+                        log.warn("No subscription found for classId {}", classId);
+                    }
                     
                     result.put("status", "success");
                     result.put("className", classInfo.getSimpleClassName());
@@ -223,6 +224,7 @@ public class ClassController {
     
     @lombok.Data
     public static class SubscribeRequest {
+        private String username;
         private List<Long> classIds;
         private Long filterKey;  // optional, defaults to 0
         

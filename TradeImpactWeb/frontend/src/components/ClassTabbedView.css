@@ -110,6 +110,38 @@
   background-color: rgba(255, 255, 255, 0.15);
 }
 
+.close-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-right: 4px;
+  background: none;
+  border: none;
+  border-left: 1px solid rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: bold;
+  color: #dc3545;
+  opacity: 0.6;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.close-button:hover {
+  opacity: 1;
+  background-color: rgba(220, 53, 69, 0.1);
+}
+
+.tab-item.active .close-button {
+  border-left-color: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.tab-item.active .close-button:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
 .tab-content {
   flex: 1;
   overflow: auto;

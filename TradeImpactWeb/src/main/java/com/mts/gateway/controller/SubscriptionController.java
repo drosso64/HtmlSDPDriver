@@ -1,7 +1,7 @@
 package com.mts.gateway.controller;
 
 import com.mts.gateway.entity.MarketDataRecord;
-import com.mts.gateway.entity.Subscription;
+import com.mts.gateway.service.ActiveSubscriptionService;
 import com.mts.gateway.service.DatabaseCleanupService;
 import com.mts.gateway.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
@@ -38,11 +38,11 @@ public class SubscriptionController {
      * @return Created subscription
      */
     @PostMapping
-    public ResponseEntity<Subscription> createSubscription(@RequestBody SubscriptionRequest request) {
+    public ResponseEntity<ActiveSubscriptionService.SubscriptionInfo> createSubscription(@RequestBody SubscriptionRequest request) {
         log.info("POST /api/subscriptions - user={} classId={}", request.username, request.classId);
         
         try {
-            Subscription subscription = subscriptionService.createSubscription(
+            ActiveSubscriptionService.SubscriptionInfo subscription = subscriptionService.createSubscription(
                 request.username,
                 request.classId
             );
@@ -63,11 +63,11 @@ public class SubscriptionController {
      * @return List of subscriptions
      */
     @GetMapping("/user/{username}")
-    public ResponseEntity<List<Subscription>> getUserSubscriptions(@PathVariable String username) {
+    public ResponseEntity<List<ActiveSubscriptionService.SubscriptionInfo>> getUserSubscriptions(@PathVariable String username) {
         log.info("GET /api/subscriptions/user/{}", username);
         
         try {
-            List<Subscription> subscriptions = subscriptionService.getUserSubscriptions(username);
+            List<ActiveSubscriptionService.SubscriptionInfo> subscriptions = subscriptionService.getUserSubscriptions(username);
             return ResponseEntity.ok(subscriptions);
             
         } catch (Exception e) {
@@ -84,11 +84,12 @@ public class SubscriptionController {
      * @return List of active subscriptions
      */
     @GetMapping("/user/{username}/active")
-    public ResponseEntity<List<Subscription>> getActiveSubscriptions(@PathVariable String username) {
+    public ResponseEntity<List<ActiveSubscriptionService.SubscriptionInfo>> getActiveSubscriptions(@PathVariable String username) {
         log.info("GET /api/subscriptions/user/{}/active", username);
         
         try {
-            List<Subscription> subscriptions = subscriptionService.getActiveSubscriptions(username);
+            List<ActiveSubscriptionService.SubscriptionInfo> subscriptions = subscriptionService.getActiveSubscriptions(username);
+            log.info("Returning {} active subscriptions for user {}", subscriptions.size(), username);
             return ResponseEntity.ok(subscriptions);
             
         } catch (Exception e) {
@@ -98,81 +99,27 @@ public class SubscriptionController {
     }
     
     /**
-     * GET /api/subscriptions/{id}
-     * Get subscription by ID
+     * DELETE /api/subscriptions/{username}/{classId}
+     * Delete subscription and send unsubscribe to AP
      * 
-     * @param id Subscription ID
-     * @return Subscription details
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<Subscription> getSubscription(@PathVariable Long id) {
-        log.info("GET /api/subscriptions/{}", id);
-        
-        return subscriptionService.getSubscription(id)
-            .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
-    }
-    
-    /**
-     * DELETE /api/subscriptions/{id}
-     * Delete a subscription
-     * 
-     * @param id Subscription ID
+     * @param username User identifier
+     * @param classId Class ID
      * @return Success response
      */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, String>> deleteSubscription(@PathVariable Long id) {
-        log.info("DELETE /api/subscriptions/{}", id);
+    @DeleteMapping("/{username}/{classId}")
+    public ResponseEntity<Void> deleteSubscription(@PathVariable String username, @PathVariable Long classId) {
+        log.info("DELETE /api/subscriptions/{}/{}", username, classId);
         
         try {
-            subscriptionService.deleteSubscription(id);
+            subscriptionService.deleteSubscription(username, classId);
+            return ResponseEntity.ok().build();
             
-            return ResponseEntity.ok(Map.of(
-                "status", "success",
-                "message", "Subscription deleted"
-            ));
-            
-        } catch (Exception e) {
-            log.error("Failed to delete subscription {}", id, e);
-            return ResponseEntity.internalServerError()
-                .body(Map.of("status", "error", "message", e.getMessage()));
-        }
-    }
-    
-    /**
-     * GET /api/subscriptions/{id}/data
-     * Get market data for a subscription
-     * 
-     * @param id Subscription ID
-     * @param page Page number
-     * @param size Page size
-     * @return Paginated market data
-     */
-    @GetMapping("/{id}/data")
-    public ResponseEntity<Page<MarketDataRecord>> getSubscriptionData(
-        @PathVariable Long id,
-        @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "100") int size
-    ) {
-        log.info("GET /api/subscriptions/{}/data?page={}&size={}", id, page, size);
-        
-        try {
-            var subscription = subscriptionService.getSubscription(id);
-            
-            if (subscription.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-            
-            PageRequest pageRequest = PageRequest.of(page, size, Sort.by("receivedAt").descending());
-            Page<MarketDataRecord> data = subscriptionService.getMarketData(
-                subscription.get().getClassId(),
-                pageRequest
-            );
-            
-            return ResponseEntity.ok(data);
+        } catch (IllegalArgumentException e) {
+            log.error("Subscription not found: user={} classId={}", username, classId);
+            return ResponseEntity.notFound().build();
             
         } catch (Exception e) {
-            log.error("Failed to get subscription data", e);
+            log.error("Failed to delete subscription user={} classId={}", username, classId, e);
             return ResponseEntity.internalServerError().build();
         }
     }

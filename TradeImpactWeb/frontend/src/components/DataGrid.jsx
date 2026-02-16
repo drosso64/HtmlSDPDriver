@@ -6,6 +6,15 @@ import './DataGrid.css';
 function DataGrid() {
   const { isConnected, allMessages, error } = useWebSocket();
   const [status, setStatus] = useState('Connessione al server...');
+  const [user, setUser] = useState(null);
+
+  // Load user from localStorage
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+  }, []);
 
   console.log('🔷 DataGrid render - allMessages disponibili:', allMessages?.length || 0);
 
@@ -86,7 +95,7 @@ function DataGrid() {
             </p>
           </div>
         ) : (
-          <ClassTabbedView data={parsedData} />
+          <ClassTabbedView data={parsedData} user={user} />
         )}
       </div>
     </div>

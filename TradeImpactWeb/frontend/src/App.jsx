@@ -32,7 +32,7 @@ function AppContent({ isAuthenticated, user, onLogin, onLogout }) {
           path="/subscriptions" 
           element={
             isAuthenticated ? 
-            <ClassSubscription /> : 
+            <ClassSubscription user={user} /> : 
             <Navigate to="/login" />
           } 
         />

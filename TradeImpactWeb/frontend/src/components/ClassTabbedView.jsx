@@ -1,13 +1,17 @@
 import { useState, useMemo, useEffect } from 'react';
 import DynamicDataGrid from './DynamicDataGrid';
+import * as api from '../services/api';
+import { useWebSocket } from '../contexts/WebSocketContext';
 import './ClassTabbedView.css';
 
 /**
  * Tabbed view component that creates a tab for each subscribed class
  * Allows opening individual class data in separate browser windows
  */
-function ClassTabbedView({ data }) {
+function ClassTabbedView({ data, user }) {
   const [activeTab, setActiveTab] = useState(null);
+  const [closedClassIds, setClosedClassIds] = useState(new Set());
+  const { removeClassData } = useWebSocket();
 
   console.log('🔷 ClassTabbedView render - dati ricevuti:', data?.length || 0, 'records');
 
@@ -16,6 +20,10 @@ function ClassTabbedView({ data }) {
     const grouped = {};
     data.forEach(item => {
       const classId = item.classId;
+      // Skip closed subscriptions
+      if (closedClassIds.has(classId)) {
+        return;
+      }
       if (!grouped[classId]) {
         grouped[classId] = {
           classId,
@@ -30,7 +38,7 @@ function ClassTabbedView({ data }) {
     return Object.values(grouped).sort((a, b) => 
       a.className.localeCompare(b.className)
     );
-  }, [data]);
+  }, [data, closedClassIds]);
 
   // Set active tab to first available class or restore from session storage
   useEffect(() => {
@@ -74,6 +82,31 @@ function ClassTabbedView({ data }) {
     window.open(url, '_blank');
   };
 
+  // Close subscription
+  const closeSubscription = async (classId, className) => {
+    try {
+      console.log('🗑️ Closing subscription for user:', user.username, 'classId:', classId);
+      await api.subscriptions.deleteByClassId(user.username, classId);
+      
+      // Remove data from WebSocket context (clears antenna in subscriptions page)
+      removeClassData(classId);
+      
+      // Add to closed classes to hide tab
+      setClosedClassIds(prev => new Set([...prev, classId]));
+      
+      // Reset active tab if it was the closed one
+      if (activeTab === classId) {
+        setActiveTab(null);
+      }
+      
+      console.log('✅ Subscription closed successfully');
+      
+    } catch (error) {
+      console.error('❌ Failed to close subscription:', error);
+      alert(`Errore nella chiusura della sottoscrizione: ${error.message}`);
+    }
+  };
+
   if (classTabs.length === 0) {
     return (
       <div className="no-tabs-message">
@@ -112,6 +145,17 @@ function ClassTabbedView({ data }) {
               aria-label="Apri in nuovo tab"
             >
               🗗
+            </button>
+            <button
+              className="close-button"
+              onClick={(e) => {
+                e.stopPropagation();
+                closeSubscription(tab.classId, tab.className);
+              }}
+              title={`Chiudi sottoscrizione per ${tab.className}`}
+              aria-label="Chiudi sottoscrizione"
+            >
+              ✕
             </button>
           </div>
         ))}

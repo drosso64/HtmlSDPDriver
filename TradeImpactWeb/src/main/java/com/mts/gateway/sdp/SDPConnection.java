@@ -294,25 +294,53 @@ public class SDPConnection implements Closeable {
      * 
      * @param classId The class ID to subscribe to
      * @param filterKey Optional filter key (can be null)
+     * @return CompletableFuture that completes with the subscription key
      * @throws IllegalStateException if no suitable channel is available
      * @throws SDPException if subscription request fails
      */
-    public void subscribe(ULong classId, ULong filterKey) throws SDPException {
+    public CompletableFuture<Long> subscribe(ULong classId, ULong filterKey) throws SDPException {
+        CompletableFuture<Long> future = new CompletableFuture<>();
+        
         // Try broadcast channel first (INFO_BRT, INFO_PRIV services)
         if (broadcastChannel != null) {
             log.info("Using broadcast channel for subscription");
-            broadcastChannel.startSubscribe(classId, filterKey);
-            return;
+            broadcastChannel.startSubscribe(classId, filterKey, future);
+            return future;
         }
         
         // Fall back to transaction channel (TXN_INFO_PRIV, DATA_FEED, QUERY services)
         if (transactionChannel != null) {
             log.info("Using transaction channel for subscription");
-            transactionChannel.startSubscribe(classId, filterKey);
-            return;
+            transactionChannel.startSubscribe(classId, filterKey, future);
+            return future;
         }
         
         throw new IllegalStateException("No suitable channel available for subscription");
+    }
+    
+    /**
+     * Stop subscription for a class
+     * 
+     * @param subscriptionKey The subscription key returned when starting the subscription
+     * @throws IllegalStateException if no suitable channel is available
+     * @throws SDPException if unsubscribe request fails
+     */
+    public void unsubscribe(ULong subscriptionKey) throws SDPException {
+        // Try broadcast channel first
+        if (broadcastChannel != null) {
+            log.info("Using broadcast channel for unsubscribe");
+            broadcastChannel.stopSubscribe(subscriptionKey);
+            return;
+        }
+        
+        // Fall back to transaction channel
+        if (transactionChannel != null) {
+            log.info("Using transaction channel for unsubscribe");
+            transactionChannel.stopSubscribe(subscriptionKey);
+            return;
+        }
+        
+        throw new IllegalStateException("No suitable channel available for unsubscribe");
     }
     
     // =========================================================================    // Transaction Methods - Send actions to the market
@@ -647,6 +675,7 @@ public class SDPConnection implements Closeable {
     private class BroadcastChannelImpl extends SAPBroadcastChannel {
         
         private final AtomicLong reqIdCounter = new AtomicLong(0);
+        private final Map<Long, CompletableFuture<Long>> pendingSubscriptions = new ConcurrentHashMap<>();
         
         public BroadcastChannelImpl(BroadcastContext context) throws SDPException {
             super(context);
@@ -727,8 +756,25 @@ public class SDPConnection implements Closeable {
         
         @Override
         public void onSubscribeStart(SAPSubscribeStartRes res) {
-            log.info("Subscription started for class {} with result {}", 
-                    res.getClassId(), res.getResult());
+            log.info("Subscription started for class {} with result {} subscribeKey={} reqID={}", 
+                    res.getClassId(), res.getResult(), res.getSubscribeKey(), res.getReqID());
+            
+            // Complete the future with the subscription key
+            Long reqId = res.getReqID().getValue();
+            CompletableFuture<Long> future = pendingSubscriptions.remove(reqId);
+            if (future != null) {
+                log.info("Found pending subscription for reqID={}, completing future", reqId);
+                if (res.getResult() == SAPSubscribeStartRes.Result.SAP_SubscribeOK) {
+                    future.complete(res.getSubscribeKey().getValue());
+                    log.info("Future completed successfully with subscriptionKey={}", res.getSubscribeKey());
+                } else {
+                    future.completeExceptionally(
+                        new Exception("Subscription failed: " + res.getResult()));
+                }
+            } else {
+                log.warn("No pending subscription found for reqID={}, available reqIDs: {}", 
+                    reqId, pendingSubscriptions.keySet());
+            }
         }
         
         @Override
@@ -764,16 +810,30 @@ public class SDPConnection implements Closeable {
         /**
          * Start subscription for a class - follows pattern from AppSAPBroadcastChannel
          */
-        public void startSubscribe(ULong classId, ULong filterKey) throws SDPException {
+        public void startSubscribe(ULong classId, ULong filterKey, CompletableFuture<Long> future) throws SDPException {
+            long reqId = reqIdCounter.incrementAndGet();
+            pendingSubscriptions.put(reqId, future);
+            
             SAPSubscribeStartReq sapSubscribeStartReq = new SAPSubscribeStartReq();
-            sapSubscribeStartReq.setReqId(new ULong(reqIdCounter.incrementAndGet()));
+            sapSubscribeStartReq.setReqId(new ULong(reqId));
             sapSubscribeStartReq.setSubscribeType(SAPSubscribeStartReq.SubscribeType.All);
             sapSubscribeStartReq.setClassId(classId);
             if (filterKey != null) {
                 sapSubscribeStartReq.setFilterKey(filterKey);
             }
-            subscribeRequest(sapSubscribeStartReq);
+            subscribeStart(sapSubscribeStartReq);
             log.info("Started subscription for class {}", classId);
+        }
+        
+        /**
+         * Stop subscription
+         */
+        public void stopSubscribe(ULong subscriptionKey) throws SDPException {
+            SAPSubscribeStopReq sapSubscribeStopReq = new SAPSubscribeStopReq();
+            sapSubscribeStopReq.setReqId(new ULong(reqIdCounter.incrementAndGet()));
+            sapSubscribeStopReq.setSubscribeKey(subscriptionKey);
+            subscribeStop(sapSubscribeStopReq);
+            log.info("Stopped subscription with key {}", subscriptionKey);
         }
     }
     
@@ -783,6 +843,7 @@ public class SDPConnection implements Closeable {
     private class TransactionChannelImpl extends SAPTransactionChannel {
         
         private final AtomicLong reqIdCounter = new AtomicLong(0);
+        private final Map<Long, CompletableFuture<Long>> pendingSubscriptions = new ConcurrentHashMap<>();
         
         public TransactionChannelImpl(TransactionContext context) throws SDPException {
             super(context);
@@ -877,7 +938,25 @@ public class SDPConnection implements Closeable {
         
         @Override
         public void onSubscribeStart(SAPSubscribeStartRes res) {
-            log.info("Subscription started for class {}", res.getClassId());
+            log.info("Subscription started for class {} with result {} subscribeKey={} reqID={}", 
+                    res.getClassId(), res.getResult(), res.getSubscribeKey(), res.getReqID());
+            
+            // Complete the future with the subscription key
+            Long reqId = res.getReqID().getValue();
+            CompletableFuture<Long> future = pendingSubscriptions.remove(reqId);
+            if (future != null) {
+                log.info("Found pending subscription for reqID={}, completing future", reqId);
+                if (res.getResult() == SAPSubscribeStartRes.Result.SAP_SubscribeOK) {
+                    future.complete(res.getSubscribeKey().getValue());
+                    log.info("Future completed successfully with subscriptionKey={}", res.getSubscribeKey());
+                } else {
+                    future.completeExceptionally(
+                        new Exception("Subscription failed: " + res.getResult()));
+                }
+            } else {
+                log.warn("No pending subscription found for reqID={}, available reqIDs: {}", 
+                    reqId, pendingSubscriptions.keySet());
+            }
         }
         
         @Override
@@ -1001,16 +1080,30 @@ public class SDPConnection implements Closeable {
         /**
          * Start subscription for a class
          */
-        public void startSubscribe(ULong classId, ULong filterKey) throws SDPException {
+        public void startSubscribe(ULong classId, ULong filterKey, CompletableFuture<Long> future) throws SDPException {
+            long reqId = reqIdCounter.incrementAndGet();
+            pendingSubscriptions.put(reqId, future);
+            
             SAPSubscribeStartReq sapSubscribeStartReq = new SAPSubscribeStartReq();
-            sapSubscribeStartReq.setReqId(new ULong(reqIdCounter.incrementAndGet()));
+            sapSubscribeStartReq.setReqId(new ULong(reqId));
             sapSubscribeStartReq.setSubscribeType(SAPSubscribeStartReq.SubscribeType.All);
             sapSubscribeStartReq.setClassId(classId);
             if (filterKey != null) {
                 sapSubscribeStartReq.setFilterKey(filterKey);
             }
-            subscribeRequest(sapSubscribeStartReq);
+            subscribeStart(sapSubscribeStartReq);
             log.info("Started subscription for class {} on transaction channel", classId);
+        }
+        
+        /**
+         * Stop subscription
+         */
+        public void stopSubscribe(ULong subscriptionKey) throws SDPException {
+            SAPSubscribeStopReq sapSubscribeStopReq = new SAPSubscribeStopReq();
+            sapSubscribeStopReq.setReqId(new ULong(reqIdCounter.incrementAndGet()));
+            sapSubscribeStopReq.setSubscribeKey(subscriptionKey);
+            subscribeStop(sapSubscribeStopReq);
+            log.info("Stopped subscription with key {}", subscriptionKey);
         }
         
         @Override

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import './ClassSubscription.css';
 import { useWebSocket } from '../contexts/WebSocketContext';
 
-function ClassSubscription() {
+function ClassSubscription({ user }) {
   const [classes, setClasses] = useState([]);
   const [selectedClasses, setSelectedClasses] = useState(new Set());
   const [loading, setLoading] = useState(true);
@@ -57,6 +57,7 @@ function ClassSubscription() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          username: user?.username || 'default-user',
           classIds: Array.from(selectedClasses),
           filterKey: 0
         })

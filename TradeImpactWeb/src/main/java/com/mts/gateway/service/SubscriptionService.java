@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Subscription Management Service
@@ -36,7 +37,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class SubscriptionService {
     
-    private final SubscriptionRepository subscriptionRepository;
+    private final ActiveSubscriptionService activeSubscriptionService;
     private final MarketDataRepository marketDataRepository;
     private final ClassMetadataRepository classMetadataRepository;
     private final GenericSMPSerializer serializer;
@@ -46,14 +47,14 @@ public class SubscriptionService {
      * Create a new subscription
      */
     @Transactional
-    public Subscription createSubscription(String username, Long classId) {
+    public ActiveSubscriptionService.SubscriptionInfo createSubscription(String username, Long classId) {
         log.info("Creating subscription for user={} classId={}", username, classId);
         
-        // Check if subscription already exists
-        Optional<Subscription> existing = subscriptionRepository.findByUsernameAndClassId(username, classId);
-        if (existing.isPresent()) {
-            log.info("Subscription already exists: {}", existing.get().getId());
-            return existing.get();
+        // Check if subscription already exists in memory
+        ActiveSubscriptionService.SubscriptionInfo existing = activeSubscriptionService.getSubscription(username, classId);
+        if (existing != null) {
+            log.info("Subscription already exists: classId={} subscriptionKey={}", classId, existing.getSubscriptionKey());
+            return existing;
         }
         
         // Get class metadata
@@ -62,41 +63,28 @@ public class SubscriptionService {
             throw new IllegalArgumentException("Class not found: " + classId);
         }
         
-        // Create subscription
-        Subscription subscription = Subscription.builder()
-            .username(username)
-            .classId(classId)
-            .className(metadata.getSimpleClassName())
-            .status(SubscriptionStatus.PENDING)
-            .recordCount(0L)
-            .build();
-        
-        subscription = subscriptionRepository.save(subscription);
-        
-        log.info("Subscription created: id={}", subscription.getId());
-        
         // Send actual subscription to AP
         try {
-            sendSubscriptionToAP(metadata, 0L);
-            subscription.setStatus(SubscriptionStatus.ACTIVE);
-            subscriptionRepository.save(subscription);
-            log.info("Subscription activated for class {} on service {}", 
-                metadata.getSimpleClassName(), metadata.getServiceId());
+            Long subscriptionKey = sendSubscriptionToAP(metadata, 0L);
+            log.info("Received subscription key from AP: {}", subscriptionKey);
+            
+            // Store in memory
+            activeSubscriptionService.addSubscription(username, classId, metadata.getSimpleClassName(), subscriptionKey);
+            
+            log.info("Subscription activated: classId={} className={} key={}", 
+                classId, metadata.getSimpleClassName(), subscriptionKey);
+            
+            return new ActiveSubscriptionService.SubscriptionInfo(classId, metadata.getSimpleClassName(), subscriptionKey);
         } catch (Exception e) {
             log.error("Failed to send subscription to AP for class {}", classId, e);
-            subscription.setStatus(SubscriptionStatus.ERROR);
-            subscription.setErrorMessage(e.getMessage());
-            subscriptionRepository.save(subscription);
             throw new RuntimeException("Failed to subscribe to AP: " + e.getMessage(), e);
         }
-        
-        return subscription;
     }
     
     /**
-     * Send subscription request to Access Point
+     * Send subscription request to Access Point and wait for subscription key
      */
-    private void sendSubscriptionToAP(ClassInfo classInfo, Long filterKey) throws Exception {
+    private Long sendSubscriptionToAP(ClassInfo classInfo, Long filterKey) throws Exception {
         String serviceIdStr = classInfo.getServiceId();
         
         // Parse service type using enum
@@ -123,9 +111,77 @@ public class SubscriptionService {
                 serviceType.getName(), serviceType.getId(), classInfo.getSimpleClassName(), 
                 classInfo.getClassId(), filterKey);
             
-            connection.subscribe(classIdULong, filterKeyULong);
+            // Subscribe and wait for subscription key
+            CompletableFuture<Long> subscriptionFuture = connection.subscribe(classIdULong, filterKeyULong);
             
-            log.info("Subscription request sent successfully");
+            // Wait for subscription key (with timeout)
+            Long subscriptionKey = subscriptionFuture.get(30, java.util.concurrent.TimeUnit.SECONDS);
+            
+            log.info("Subscription request sent successfully, key: {}", subscriptionKey);
+            return subscriptionKey;
+        } catch (java.util.concurrent.TimeoutException e) {
+            throw new RuntimeException("Timeout waiting for subscription response from AP", e);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send subscription to AP", e);
+        } finally {
+            // CRITICAL: Always release connection back to pool
+            connectionPool.releaseConnection(connection);
+        }
+    }
+    
+    /**
+     * Delete subscription and send unsubscribe request to AP
+     */
+    @Transactional
+    public void deleteSubscription(String username, Long classId) {
+        log.info("Deleting subscription for user={} classId={}", username, classId);
+        
+        // Get subscription from memory
+        ActiveSubscriptionService.SubscriptionInfo subscription = activeSubscriptionService.getSubscription(username, classId);
+        if (subscription == null) {
+            throw new IllegalArgumentException("No subscription found for classId: " + classId);
+        }
+        
+        // Send unsubscribe to AP
+        Long subscriptionKey = subscription.getSubscriptionKey();
+        try {
+            ClassInfo classInfo = classMetadataRepository.getClassInfo(classId);
+            sendUnsubscribeToAP(classInfo, subscriptionKey);
+        } catch (Exception e) {
+            log.error("Failed to send unsubscribe to AP for classId={}", classId, e);
+            // Continue with removal even if AP unsubscribe fails
+        }
+        
+        // Remove from memory
+        activeSubscriptionService.removeSubscription(username, classId);
+        log.info("Subscription deleted: classId={}", classId);
+    }
+    
+    /**
+     * Send unsubscribe request to Access Point
+     */
+    private void sendUnsubscribeToAP(ClassInfo classInfo, Long subscriptionKey) throws Exception {
+        String serviceIdStr = classInfo.getServiceId();
+        
+        // Parse service type using enum
+        ServiceType serviceType = ServiceType.fromString(serviceIdStr);
+        
+        // Get connection for the service
+        SDPConnection connection = connectionPool.getConnection(serviceType.getName());
+        if (connection == null) {
+            throw new IllegalStateException("No connection available for service: " + serviceType);
+        }
+        
+        try {
+            // Send unsubscribe request
+            ULong subscriptionKeyULong = new ULong(subscriptionKey);
+            
+            log.info("Sending unsubscribe to AP: service={} subscriptionKey={}",
+                serviceType.getName(), subscriptionKey);
+            
+            connection.unsubscribe(subscriptionKeyULong);
+            
+            log.info("Unsubscribe request sent successfully");
         } finally {
             // CRITICAL: Always release connection back to pool
             connectionPool.releaseConnection(connection);
@@ -135,70 +191,38 @@ public class SubscriptionService {
     /**
      * Get all subscriptions for a user
      */
-    public List<Subscription> getUserSubscriptions(String username) {
-        return subscriptionRepository.findByUsername(username);
+    public List<ActiveSubscriptionService.SubscriptionInfo> getUserSubscriptions(String username) {
+        return activeSubscriptionService.getActiveSubscriptions(username);
     }
     
     /**
      * Get active subscriptions for a user
      */
-    public List<Subscription> getActiveSubscriptions(String username) {
-        return subscriptionRepository.findByUsernameAndStatus(username, SubscriptionStatus.ACTIVE);
+    public List<ActiveSubscriptionService.SubscriptionInfo> getActiveSubscriptions(String username) {
+        log.info("Getting active subscriptions for user: {}", username);
+        List<ActiveSubscriptionService.SubscriptionInfo> subscriptions = activeSubscriptionService.getActiveSubscriptions(username);
+        log.info("Found {} active subscriptions for user {}", subscriptions.size(), username);
+        subscriptions.forEach(sub -> 
+            log.info("  - Subscription: classId={} className={} subscriptionKey={}", 
+                sub.getClassId(), sub.getClassName(), sub.getSubscriptionKey())
+        );
+        return subscriptions;
     }
     
     /**
-     * Get subscription by ID
+     * Clear all subscriptions for user (on logout/websocket disconnect)
      */
-    public Optional<Subscription> getSubscription(Long subscriptionId) {
-        return subscriptionRepository.findById(subscriptionId);
-    }
-    
-    /**
-     * Update subscription status
-     */
-    @Transactional
-    public void updateSubscriptionStatus(Long subscriptionId, SubscriptionStatus status) {
-        log.info("Updating subscription {} status to {}", subscriptionId, status);
-        
-        Optional<Subscription> optSub = subscriptionRepository.findById(subscriptionId);
-        if (optSub.isPresent()) {
-            Subscription subscription = optSub.get();
-            subscription.setStatus(status);
-            subscription.setLastActivity(LocalDateTime.now());
-            subscriptionRepository.save(subscription);
-        }
-    }
-    
-    /**
-     * Update subscription status with error
-     */
-    @Transactional
-    public void updateSubscriptionError(Long subscriptionId, String errorMessage) {
-        log.error("Subscription {} error: {}", subscriptionId, errorMessage);
-        
-        Optional<Subscription> optSub = subscriptionRepository.findById(subscriptionId);
-        if (optSub.isPresent()) {
-            Subscription subscription = optSub.get();
-            subscription.setStatus(SubscriptionStatus.ERROR);
-            subscription.setErrorMessage(errorMessage);
-            subscriptionRepository.save(subscription);
-        }
-    }
-    
-    /**
-     * Delete subscription
-     */
-    @Transactional
-    public void deleteSubscription(Long subscriptionId) {
-        log.info("Deleting subscription {}", subscriptionId);
-        subscriptionRepository.deleteById(subscriptionId);
+    public void clearUserSubscriptions(String username) {
+        log.info("Clearing all subscriptions for user: {}", username);
+        activeSubscriptionService.clearUserSubscriptions(username);
+        // No need to unsubscribe one by one - SDP connection closure handles it
     }
     
     /**
      * Persist market data record
      */
     @Transactional
-    public void persistMarketData(Long subscriptionId, Object smpObject, ClassSchema schema, String action) {
+    public void persistMarketData(Long classId, String className, Object smpObject, ClassSchema schema, String action) {
         try {
             // Serialize SMP object to JSON
             JsonNode jsonNode = serializer.serialize(smpObject, schema);
@@ -210,33 +234,14 @@ public class SubscriptionService {
                 .className(schema.getSimpleClassName())
                 .jsonData(jsonData)
                 .action(action)
-                .subscriptionId(subscriptionId)
                 .build();
             
             marketDataRepository.save(record);
             
-            // Update subscription statistics
-            updateSubscriptionStats(subscriptionId);
-            
-            log.debug("Persisted market data for subscription {} class {}", 
-                subscriptionId, schema.getSimpleClassName());
+            log.debug("Persisted market data for class {} ({})", className, classId);
             
         } catch (Exception e) {
-            log.error("Failed to persist market data for subscription {}", subscriptionId, e);
-        }
-    }
-    
-    /**
-     * Update subscription statistics
-     */
-    @Transactional
-    protected void updateSubscriptionStats(Long subscriptionId) {
-        Optional<Subscription> optSub = subscriptionRepository.findById(subscriptionId);
-        if (optSub.isPresent()) {
-            Subscription subscription = optSub.get();
-            subscription.setRecordCount(subscription.getRecordCount() + 1);
-            subscription.setLastActivity(LocalDateTime.now());
-            subscriptionRepository.save(subscription);
+            log.error("Failed to persist market data for class {} ({})", className, classId, e);
         }
     }
     
@@ -256,13 +261,6 @@ public class SubscriptionService {
     }
     
     /**
-     * Get market data for a subscription
-     */
-    public List<MarketDataRecord> getSubscriptionData(Long subscriptionId) {
-        return marketDataRepository.findBySubscriptionId(subscriptionId);
-    }
-    
-    /**
      * Clear market data for a class
      */
     @Transactional
@@ -275,11 +273,10 @@ public class SubscriptionService {
      * Get subscription statistics
      */
     public SubscriptionStats getStats(String username) {
-        long total = subscriptionRepository.findByUsername(username).size();
-        long active = subscriptionRepository.countByUsernameAndStatus(username, SubscriptionStatus.ACTIVE);
+        long active = activeSubscriptionService.getActiveSubscriptions(username).size();
         
         return SubscriptionStats.builder()
-            .totalSubscriptions(total)
+            .totalSubscriptions(active)
             .activeSubscriptions(active)
             .build();
     }

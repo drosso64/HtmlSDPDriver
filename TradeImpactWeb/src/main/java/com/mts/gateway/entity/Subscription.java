@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDateTime;
 
@@ -45,6 +46,13 @@ public class Subscription {
     private String className;
     
     /**
+     * SDP Subscription Key - needed for unsubscribe
+     * Returned by SAPSubscribeStartRes
+     */
+    @Column
+    private Long subscriptionKey;
+    
+    /**
      * Subscription status
      */
     @Enumerated(EnumType.STRING)
@@ -54,18 +62,21 @@ public class Subscription {
     /**
      * When subscription was created
      */
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @Column(nullable = false)
     private LocalDateTime createdAt;
     
     /**
      * Last update timestamp
      */
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @Column
     private LocalDateTime updatedAt;
     
     /**
      * Last activity timestamp (data received)
      */
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @Column
     private LocalDateTime lastActivity;
     
