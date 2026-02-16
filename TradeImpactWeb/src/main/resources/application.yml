@@ -1,0 +1,129 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: tradeimpact-web-gateway
+  
+  # H2 Database Configuration
+  datasource:
+    url: jdbc:h2:file:./data/marketdata;AUTO_SERVER=TRUE;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  
+  # JPA/Hibernate Configuration
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: false
+  
+  # Jackson JSON Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+      indent-output: true
+    deserialization:
+      fail-on-unknown-properties: false
+
+# SDP Protocol Configuration
+sdp:
+  # Platform Identifier (numeric) - defines which platform this container serves (e.g., BV=6)
+  platform-id: ${PLATFORM_ID:1}
+  
+  # Market Classes JAR Path (loaded dynamically at runtime)
+  market-classes-jar: ${SDP_CLASSES_JAR:./libs/sdp-bvf-BV14.1_20260128.1-sources.jar}
+  
+  # Market Factory Class (optional - if not specified, will scan JAR for MarketFactory implementation)
+  market-factory-class: ${MARKET_FACTORY_CLASS:}
+  
+  # Classes CSV file path - contains: ClassName,ClassId,ServiceId
+  classes-csv: ${SDP_CLASSES_CSV:./config/classes.csv}
+  
+  # Additional JAR paths (comma-separated)
+  additional-jars: ${SDP_ADDITIONAL_JARS:}
+  
+  # Auto-reload JAR on file change
+  auto-reload: ${SDP_AUTO_RELOAD:false}
+  reload-check-interval: 60s
+  
+  # Connection Pool Configuration
+  connection-pool:
+    min-size: 1
+    max-size: 1
+    max-connections-per-service: 5
+    connection-timeout: 30s
+    keep-alive-interval: 30s
+    reconnect-delay: 5s
+  
+  # IPSP Configuration
+  ipsp:
+    default-host: ${IPSP_HOST:}
+    default-port: ${IPSP_PORT:8800}
+    use-ssl: ${IPSP_SSL:true}
+  
+  # Subscription Configuration
+  subscriptions:
+    default-type: ONTIME
+    enable-persistence: true
+    batch-size: 100
+    
+  # Query Configuration
+  query:
+    default-page-size: 100
+    max-page-size: 1000
+    result-set-ttl: 300s
+
+# Database Cleanup Configuration
+database:
+  cleanup:
+    retention-days: 30
+    auto-cleanup-enabled: false
+    cleanup-schedule: "0 0 2 * * ?" # Daily at 2 AM
+  
+  backup:
+    enabled: true
+    directory: ./backups
+    keep-days: 7
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.mts.gateway: DEBUG
+    com.mts.gateway.sdp: TRACE
+    com.mtsmarkets.sdp: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: ./logs/gateway.log
+    max-size: 10MB
+    max-history: 30
+
+# WebSocket Configuration
+websocket:
+  allowed-origins: "*"
+  message-size-limit: 1048576 # 1MB
+  send-timeout: 30s
+
+# Management Endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always

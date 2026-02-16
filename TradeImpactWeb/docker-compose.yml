@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  tradeimpact-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tradeimpact-web
+    ports:
+      - "8080:8080"
+    environment:
+      # Java Options
+      - JAVA_OPTS=-Xmx512m -Xms256m
+      
+      # Server Configuration
+      - SERVER_PORT=8080
+      
+      # Database (H2 file-based)
+      - SPRING_DATASOURCE_URL=jdbc:h2:file:/app/data/marketdata
+      
+      # SDP Configuration (override con .env o qui)
+      - SDP_HOST=${SDP_HOST:-localhost}
+      - SDP_PORT=${SDP_PORT:-9999}
+      - SDP_USERNAME=${SDP_USERNAME:-user}
+      - SDP_PASSWORD=${SDP_PASSWORD:-pass}
+      
+      # Data Retention
+      - DATA_RETENTION_DAYS=${DATA_RETENTION_DAYS:-30}
+      
+      # Logging
+      - LOGGING_LEVEL_COM_TRADEIMPACT=${LOG_LEVEL:-INFO}
+    
+    volumes:
+      # Persisti database H2
+      - ./data:/app/data
+      
+      # Opzionale: mount logs
+      - ./logs:/app/logs
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+    
+    networks:
+      - tradeimpact-net
+
+networks:
+  tradeimpact-net:
+    driver: bridge
+
+volumes:
+  data:
+  logs:

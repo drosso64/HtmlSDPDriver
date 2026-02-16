@@ -1,0 +1,184 @@
+.class-tabs-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.tabs-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px;
+  background-color: #f5f5f5;
+  border-bottom: 2px solid #ddd;
+  min-height: 48px;
+}
+
+.tab-item {
+  display: flex;
+  align-items: center;
+  background-color: #ffffff;
+  border: 1px solid #dcdcdc;
+  border-radius: 6px 6px 0 0;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tab-item:hover {
+  border-color: #007bff;
+  box-shadow: 0 2px 5px rgba(0, 123, 255, 0.2);
+}
+
+.tab-item.active {
+  background-color: #007bff;
+  border-color: #0056b3;
+  color: white;
+  box-shadow: 0 2px 6px rgba(0, 123, 255, 0.4);
+}
+
+.tab-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: inherit;
+  transition: opacity 0.2s ease;
+}
+
+.tab-item.active .tab-button {
+  color: white;
+}
+
+.tab-button:hover {
+  opacity: 0.8;
+}
+
+.tab-name {
+  font-weight: 500;
+}
+
+.tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  padding: 2px 6px;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tab-item.active .tab-count {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.popout-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-right: 4px;
+  background: none;
+  border: none;
+  border-left: 1px solid rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  font-size: 16px;
+  opacity: 0.6;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.popout-button:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.tab-item.active .popout-button {
+  border-left-color: rgba(255, 255, 255, 0.3);
+}
+
+.tab-item.active .popout-button:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.tab-content {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  background-color: #ffffff;
+}
+
+.no-tabs-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: #666;
+}
+
+.no-tabs-message p {
+  margin: 8px 0;
+  font-size: 16px;
+}
+
+.no-tabs-message .hint {
+  margin-top: 16px;
+  font-size: 14px;
+  color: #999;
+}
+
+.no-data-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: #666;
+}
+
+/* Responsive design for mobile/tablet */
+@media (max-width: 768px) {
+  .tabs-bar {
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .tab-item {
+    min-width: 120px;
+  }
+
+  .tab-button {
+    padding: 10px 14px;
+    font-size: 15px;
+  }
+
+  .popout-button {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+
+  .tab-content {
+    padding: 12px;
+  }
+}
+
+/* Small screens - single column tabs */
+@media (max-width: 480px) {
+  .tab-item {
+    flex: 1 1 100%;
+    min-width: unset;
+  }
+}

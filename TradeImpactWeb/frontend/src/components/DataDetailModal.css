@@ -1,0 +1,255 @@
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Modal Content */
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  max-width: 90%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Modal Header */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 2px solid #e0e0e0;
+  background: #f5f5f5;
+  border-radius: 8px 8px 0 0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+/* Modal Body */
+.modal-body {
+  padding: 20px;
+  overflow: auto;
+  flex: 1;
+  min-height: 200px;
+  max-height: calc(85vh - 140px);
+}
+
+/* Detail Tables */
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin: 0;
+}
+
+.detail-table thead {
+  background: #f9f9f9;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.detail-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #ddd;
+  white-space: nowrap;
+}
+
+.detail-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid #eee;
+  vertical-align: top;
+}
+
+.detail-table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+/* Field Styles */
+.field-name {
+  font-weight: 500;
+  color: #555;
+  width: 35%;
+  max-width: 250px;
+}
+
+.field-value {
+  color: #333;
+  word-break: break-word;
+}
+
+.array-index {
+  text-align: center;
+  color: #666;
+  font-weight: 500;
+  width: 60px;
+}
+
+/* Value Type Styles */
+.null-value {
+  color: #999;
+  font-style: italic;
+}
+
+.primitive-value {
+  color: #333;
+}
+
+.detail-link {
+  background: #e3f2fd;
+  color: #1976d2;
+  border: 1px solid #bbdefb;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.detail-link:hover {
+  background: #bbdefb;
+  border-color: #90caf9;
+}
+
+.detail-link:active {
+  transform: scale(0.95);
+}
+
+/* Object and Array Details */
+.object-details,
+.array-details {
+  width: 100%;
+}
+
+.empty-array,
+.no-data {
+  padding: 40px;
+  text-align: center;
+  color: #999;
+  font-style: italic;
+}
+
+/* Modal Footer */
+.modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: flex-end;
+  background: #fafafa;
+  border-radius: 0 0 8px 8px;
+}
+
+.btn-close {
+  padding: 8px 20px;
+  background: #f5f5f5;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  transition: all 0.2s;
+}
+
+.btn-close:hover {
+  background: #e0e0e0;
+  border-color: #999;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .modal-content {
+    max-width: 95%;
+    max-height: 90vh;
+  }
+
+  .modal-body {
+    padding: 12px;
+  }
+
+  .detail-table th,
+  .detail-table td {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .field-name {
+    width: 40%;
+  }
+}
+
+/* Nested Modal Overlay - slightly darker */
+.modal-overlay + .modal-overlay {
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 1100;
+}
+
+.modal-overlay + .modal-overlay .modal-content {
+  z-index: 1101;
+}

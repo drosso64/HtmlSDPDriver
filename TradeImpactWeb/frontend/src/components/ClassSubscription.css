@@ -1,0 +1,194 @@
+.class-subscription {
+  padding: 20px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.class-subscription h1 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/* WebSocket Status */
+.websocket-status {
+  padding: 10px 15px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.websocket-status.connected {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.websocket-status.disconnected {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.ws-error {
+  font-weight: normal;
+  font-style: italic;
+}
+
+.subscription-info {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.subscription-info p {
+  margin: 5px 0;
+  color: #666;
+}
+
+.active-count {
+  font-size: 16px;
+  color: #333;
+}
+
+.active-count strong {
+  color: #007bff;
+}
+
+.data-count {
+  font-size: 14px;
+  color: #28a745;
+  font-weight: 500;
+}
+
+.class-list {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.class-item {
+  border-bottom: 1px solid #e9ecef;
+  padding: 15px 20px;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.class-item:last-child {
+  border-bottom: none;
+}
+
+.class-item:hover {
+  background-color: #f8f9fa;
+}
+
+.class-item.subscribed {
+  background-color: #e7f3ff;
+}
+
+.class-checkbox {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  flex: 1;
+  gap: 12px;
+}
+
+.class-checkbox input[type="checkbox"] {
+  display: none;
+}
+
+.checkbox-custom {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ccc;
+  border-radius: 4px;
+  display: inline-block;
+  position: relative;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.class-checkbox input:checked + .checkbox-custom {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+.class-checkbox input:checked + .checkbox-custom::after {
+  content: '✓';
+  color: white;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.class-info {
+  flex: 1;
+}
+
+.class-name {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.live-indicator {
+  font-size: 16px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.market-data-preview {
+  margin-top: 5px;
+  padding: 5px 10px;
+  background: #e7f5e7;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #2d862d;
+}
+
+.class-description {
+  font-size: 13px;
+  color: #666;
+}
+
+.status-badge {
+  background: #28a745;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.empty-message {
+  padding: 40px 20px;
+  text-align: center;
+  color: #666;
+}
+
+@media (max-width: 768px) {
+  .class-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .status-badge {
+    align-self: flex-end;
+  }
+}

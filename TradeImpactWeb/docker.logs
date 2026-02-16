@@ -1,0 +1,604 @@
+Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.2)
+
+2026-02-12 11:04:20.907 [main] INFO  com.mts.gateway.GatewayApplication - Starting GatewayApplication v1.0.0-SNAPSHOT using Java 17.0.18 with PID 1 (/app/app.jar started by appuser in /app)
+2026-02-12 11:04:20.909 [main] DEBUG com.mts.gateway.GatewayApplication - Running with Spring Boot v3.2.2, Spring v6.1.3
+2026-02-12 11:04:20.910 [main] INFO  com.mts.gateway.GatewayApplication - No active profile set, falling back to 1 default profile: "default"
+2026-02-12 11:04:21.905 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-02-12 11:04:21.973 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 59 ms. Found 2 JPA repository interfaces.
+2026-02-12 11:04:22.529 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-02-12 11:04:22.543 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-02-12 11:04:22.543 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.18]
+2026-02-12 11:04:22.583 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-02-12 11:04:22.584 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 1517 ms
+Standard Commons Logging discovery in action with spring-jcl: please remove commons-logging.jar from classpath in order to avoid potential conflicts
+2026-02-12 11:04:22.620 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-02-12 11:04:23.033 [main] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection conn1: url=jdbc:h2:file:./data/marketdata user=SA
+2026-02-12 11:04:23.035 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-02-12 11:04:23.046 [main] INFO  o.s.b.a.h.H2ConsoleAutoConfiguration - H2 console available at '/h2-console'. Database available at 'jdbc:h2:file:./data/marketdata'
+2026-02-12 11:04:23.180 [main] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-02-12 11:04:23.248 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.4.1.Final
+2026-02-12 11:04:23.287 [main] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2026-02-12 11:04:23.531 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-02-12 11:04:23.594 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-02-12 11:04:24.713 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-02-12 11:04:24.765 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-02-12 11:04:25.223 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-02-12 11:04:25.671 [main] INFO  c.mts.gateway.sdp.SDPConnectionPool - Initializing SDP Connection Pool (lazy mode)
+2026-02-12 11:04:25.672 [main] INFO  c.mts.gateway.sdp.SDPConnectionPool - IPSP: null:8800
+2026-02-12 11:04:25.672 [main] INFO  c.mts.gateway.sdp.SDPConnectionPool - Pool size: min=1, max=1
+2026-02-12 11:04:25.672 [main] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Initialized pool for service: TXN (ID=1)
+2026-02-12 11:04:25.673 [main] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Initialized pool for service: INFO_BRT (ID=2)
+2026-02-12 11:04:25.673 [main] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Initialized pool for service: INFO_PRIV (ID=3)
+2026-02-12 11:04:25.673 [main] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Initialized pool for service: TXN_INFO_PRIV (ID=4)
+2026-02-12 11:04:25.673 [main] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Initialized pool for service: DATA_FEED (ID=5)
+2026-02-12 11:04:25.673 [main] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Initialized pool for service: QUERY (ID=6)
+2026-02-12 11:04:25.673 [main] INFO  c.mts.gateway.sdp.SDPConnectionPool - Connection pools initialized. Connections will be created after MarketFactory is set.
+2026-02-12 11:04:25.673 [main] INFO  c.mts.gateway.sdp.SDPConnectionPool - SDP Connection Pool initialized successfully
+2026-02-12 11:04:25.683 [main] INFO  c.m.g.c.SDPClassLoaderService - Initializing SDP ClassLoader Service
+2026-02-12 11:04:25.684 [main] INFO  c.m.g.c.SDPClassLoaderService - Added market classes JAR: /app/libs/sdp-bvf-BV14.1_20260128.1.jar
+2026-02-12 11:04:25.684 [main] INFO  c.m.g.c.SDPClassLoaderService - Market class loader created with 1 JAR(s)
+2026-02-12 11:04:25.684 [main] INFO  c.m.g.c.SDPClassLoaderService - No factory class configured, scanning JAR for MarketFactory implementations
+2026-02-12 11:04:25.684 [main] INFO  c.m.g.c.SDPClassLoaderService - Scanning market JAR for MarketFactory implementations
+2026-02-12 11:04:25.703 [main] INFO  c.m.g.c.SDPClassLoaderService - Found MarketFactory implementation: com.mtsmarkets.sdp.smp.bvf.BVF_Factory
+2026-02-12 11:04:25.703 [main] INFO  c.m.g.c.SDPClassLoaderService - Using MarketFactory implementation: com.mtsmarkets.sdp.smp.bvf.BVF_Factory
+2026-02-12 11:04:25.946 [main] INFO  c.mts.gateway.sdp.SDPConnectionPool - MarketFactory set: com.mtsmarkets.sdp.smp.bvf.BVF_Factory
+2026-02-12 11:04:25.946 [main] INFO  c.m.g.c.SDPClassLoaderService - MarketFactory created and passed to connection pool: com.mtsmarkets.sdp.smp.bvf.BVF_Factory
+2026-02-12 11:04:25.946 [main] INFO  c.m.g.c.SDPClassLoaderService - SDP ClassLoader Service initialized successfully
+2026-02-12 11:04:25.951 [main] INFO  c.m.g.service.CsvClassLoaderService - Initializing CSV Class Loader Service
+2026-02-12 11:04:25.952 [main] INFO  c.m.g.service.CsvClassLoaderService - Loading classes from CSV: /app/config/classes_BV.csv
+2026-02-12 11:04:25.953 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_RFCQ_MEMBERSUMMARY" (ID=170027, Service=5)
+2026-02-12 11:04:25.953 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_RFCQ_TRAFFIC" (ID=170029, Service=5)
+2026-02-12 11:04:25.953 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_TI_RECOGNIZED_SIGNATURE" (ID=170030, Service=5)
+2026-02-12 11:04:25.953 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_TI_VERSION_EXCEPTIONS" (ID=170031, Service=5)
+2026-02-12 11:04:25.953 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_TI_ACCESS_CONTROL_LIST" (ID=170032, Service=5)
+2026-02-12 11:04:25.953 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_TI_MEMBER_ACL" (ID=170033, Service=5)
+2026-02-12 11:04:25.953 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_TI_ACL_MEMBER_CONNECTION" (ID=170034, Service=5)
+2026-02-12 11:04:25.953 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_TI_COUPON_PLAN" (ID=170035, Service=5)
+2026-02-12 11:04:25.953 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_TI_INSTRUMENT" (ID=170036, Service=5)
+2026-02-12 11:04:25.953 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_TI_INSTRUMENT_ALT_CODE" (ID=170037, Service=5)
+2026-02-12 11:04:25.953 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_TI_INSTRUMENT_CLASS" (ID=170038, Service=5)
+2026-02-12 11:04:25.953 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_TI_ISSUER" (ID=170039, Service=5)
+2026-02-12 11:04:25.953 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_TI_MEMBER" (ID=170040, Service=5)
+2026-02-12 11:04:25.953 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_VOICE_CONFIRMED_QUOTES_REGISTRATION" (ID=170043, Service=5)
+2026-02-12 11:04:25.953 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_CLIENT_REGISTRATION" (ID=170044, Service=5)
+2026-02-12 11:04:25.953 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_RFCQ_AUTO_EXECUTION_RULE" (ID=170045, Service=5)
+2026-02-12 11:04:25.954 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_PRETRADE_LIMIT" (ID=170046, Service=5)
+2026-02-12 11:04:25.954 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_PRE_TRADE_QUOTE" (ID=170047, Service=5)
+2026-02-12 11:04:25.954 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_DEALER_GROUP" (ID=170048, Service=5)
+2026-02-12 11:04:25.954 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_MIFID_DEFAULT_INFO" (ID=170049, Service=5)
+2026-02-12 11:04:25.954 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_TRADE_REGISTRATION" (ID=170050, Service=5)
+2026-02-12 11:04:25.954 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_TRADE_FUTURE" (ID=170051, Service=5)
+2026-02-12 11:04:25.954 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_EUREX_ACCOUNT" (ID=170052, Service=5)
+2026-02-12 11:04:25.954 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_PORTFOLIO_RFCQ_REQUEST" (ID=170053, Service=5)
+2026-02-12 11:04:25.954 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_PORTFOLIO_RFCQ" (ID=170054, Service=5)
+2026-02-12 11:04:25.954 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_PORTFOLIO_RFCQ_QUOTE" (ID=170055, Service=5)
+2026-02-12 11:04:25.954 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_PORTFOLIO_RFCQ_ORDER" (ID=170056, Service=5)
+2026-02-12 11:04:25.954 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_01" (ID=314771, Service=5)
+2026-02-12 11:04:25.954 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_02" (ID=314772, Service=5)
+2026-02-12 11:04:25.954 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_03" (ID=314773, Service=5)
+2026-02-12 11:04:25.954 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_04" (ID=314774, Service=5)
+2026-02-12 11:04:25.955 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_05" (ID=314775, Service=5)
+2026-02-12 11:04:25.955 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_06" (ID=314776, Service=5)
+2026-02-12 11:04:25.955 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_07" (ID=314777, Service=5)
+2026-02-12 11:04:25.955 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_08" (ID=314778, Service=5)
+2026-02-12 11:04:25.955 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_09" (ID=314779, Service=5)
+2026-02-12 11:04:25.955 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_10" (ID=314780, Service=5)
+2026-02-12 11:04:25.955 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_11" (ID=314781, Service=5)
+2026-02-12 11:04:25.955 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_12" (ID=314782, Service=5)
+2026-02-12 11:04:25.955 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_13" (ID=314783, Service=5)
+2026-02-12 11:04:25.955 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_14" (ID=314784, Service=5)
+2026-02-12 11:04:25.955 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_15" (ID=314785, Service=5)
+2026-02-12 11:04:25.955 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_16" (ID=314786, Service=5)
+2026-02-12 11:04:25.955 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_17" (ID=314787, Service=5)
+2026-02-12 11:04:25.955 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_18" (ID=314788, Service=5)
+2026-02-12 11:04:25.955 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_19" (ID=314789, Service=5)
+2026-02-12 11:04:25.956 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_20" (ID=314790, Service=5)
+2026-02-12 11:04:25.956 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_21" (ID=314791, Service=5)
+2026-02-12 11:04:25.956 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_22" (ID=314792, Service=5)
+2026-02-12 11:04:25.956 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_23" (ID=314793, Service=5)
+2026-02-12 11:04:25.956 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_24" (ID=314794, Service=5)
+2026-02-12 11:04:25.956 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_25" (ID=314795, Service=5)
+2026-02-12 11:04:25.956 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_26" (ID=314796, Service=5)
+2026-02-12 11:04:25.956 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_27" (ID=314797, Service=5)
+2026-02-12 11:04:25.956 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_28" (ID=314798, Service=5)
+2026-02-12 11:04:25.956 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_29" (ID=314799, Service=5)
+2026-02-12 11:04:25.956 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE_30" (ID=314800, Service=5)
+2026-02-12 11:04:25.956 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_INVENTORY_GROUP_RFCQ_OPTION" (ID=400000, Service=4)
+2026-02-12 11:04:25.956 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_DEALER_LIST_PREVIEW" (ID=400001, Service=4)
+2026-02-12 11:04:25.956 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RESTRICTED_TRADING" (ID=400002, Service=2)
+2026-02-12 11:04:25.956 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_CMF_DEPTH" (ID=400004, Service=2)
+2026-02-12 11:04:25.957 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_CMF_BEST" (ID=400005, Service=2)
+2026-02-12 11:04:25.957 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_CMF_LAST_DEAL" (ID=400006, Service=2)
+2026-02-12 11:04:25.957 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_CMF_FINANCIAL_INSTRUMENT_STATISTIC" (ID=400007, Service=2)
+2026-02-12 11:04:25.957 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_INSTRUMENT" (ID=400008, Service=2)
+2026-02-12 11:04:25.957 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_BENCHMARK_INDEX" (ID=400009, Service=2)
+2026-02-12 11:04:25.957 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_BENCHMARK_INDEX_VALUE" (ID=400010, Service=2)
+2026-02-12 11:04:25.957 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_IOI" (ID=400011, Service=4)
+2026-02-12 11:04:25.957 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_IOI_DEPTH" (ID=400012, Service=4)
+2026-02-12 11:04:25.957 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_BUY_SIDE_MEMBER" (ID=400014, Service=4)
+2026-02-12 11:04:25.957 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_CMF_OFFICIAL_PRICE" (ID=400015, Service=2)
+2026-02-12 11:04:25.957 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_CALLABLE_BOND" (ID=400016, Service=2)
+2026-02-12 11:04:25.957 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_CALLABLE_BOND_SCHEDULE" (ID=400017, Service=2)
+2026-02-12 11:04:25.957 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_CORPORATE_ACTION" (ID=400018, Service=2)
+2026-02-12 11:04:25.957 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_VARIABLE_COUPON_BOND_SCHEDULE" (ID=400020, Service=2)
+2026-02-12 11:04:25.957 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_CURVE" (ID=400022, Service=2)
+2026-02-12 11:04:25.958 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_ANALYTICS_BOND_TYPOLOGY" (ID=400023, Service=2)
+2026-02-12 11:04:25.958 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_MARKET" (ID=400024, Service=2)
+2026-02-12 11:04:25.958 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_MIFIR_BOND_TYPE" (ID=400025, Service=2)
+2026-02-12 11:04:25.958 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_MIFIR_BOND_SENIORITY" (ID=400026, Service=2)
+2026-02-12 11:04:25.958 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_PRETRADE_LIMIT" (ID=400027, Service=2)
+2026-02-12 11:04:25.958 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_MEMBER" (ID=400028, Service=2)
+2026-02-12 11:04:25.958 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_VOICE_CONFIRMED_QUOTES_REGISTRATION" (ID=400029, Service=4)
+2026-02-12 11:04:25.958 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_CLIENT_REGISTRATION" (ID=400031, Service=4)
+2026-02-12 11:04:25.958 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_NATIONAL_ID_REGISTRATION" (ID=400032, Service=4)
+2026-02-12 11:04:25.958 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_ALGO_ID_REGISTRATION" (ID=400033, Service=4)
+2026-02-12 11:04:25.958 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_TRADING_CAPACITY" (ID=400034, Service=2)
+2026-02-12 11:04:25.958 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_AREA_CODE_X_INSTRUMENT" (ID=400035, Service=2)
+2026-02-12 11:04:25.958 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_PRE_TRADE_QUOTE" (ID=400036, Service=2)
+2026-02-12 11:04:25.958 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_AUTO_EXECUTION_RULE" (ID=400037, Service=4)
+2026-02-12 11:04:25.958 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_DEALER_GROUP" (ID=400038, Service=4)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LEI_CODE_X_AREA_CODE" (ID=400039, Service=2)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_SELL_SIDE_X_IC_LEI_CODE" (ID=400040, Service=4)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_GREEN_BOND" (ID=400041, Service=2)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LINKER_NOMINAL_BOND" (ID=400042, Service=2)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LAST_DAY_TRADING_SUMMARY" (ID=400044, Service=4)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_AXE_INFO" (ID=400047, Service=4)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_TRADE_PMS" (ID=400048, Service=4)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_CMF_DEPTH_2" (ID=400049, Service=2)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_CMF_BEST_2" (ID=400050, Service=2)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_YIELD_FIXING" (ID=400051, Service=2)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LIQUID_INSTRUMENT_THRESHOLDS" (ID=400052, Service=2)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_ALTERNATIVE_TICKER" (ID=400053, Service=2)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_BUY_SIDE_ALLOCATION_REPORT" (ID=400054, Service=4)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_SELL_SIDE_ALLOCATION_REPORT" (ID=400055, Service=4)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_MEMBER_PRIVATE_INFO" (ID=400058, Service=4)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_BOND" (ID=400059, Service=2)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_MEMBER_DLT_SETTLEMENT_MODE" (ID=400060, Service=4)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_INVENTORY_GROUP_MEMBER_TRADER_EXC" (ID=400061, Service=4)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_REPO_OFFICIAL_PRICE" (ID=400065, Service=2)
+2026-02-12 11:04:25.959 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_TRADE_REGISTRATION" (ID=400066, Service=4)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LAST_DAY_TRADE_REGISTRATION" (ID=400068, Service=4)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_FUTURE" (ID=400069, Service=2)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_BASIS_CONVERSION_FACTOR" (ID=400070, Service=2)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_EUREX_ACCOUNT" (ID=400071, Service=2)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_TRADE_FUTURE" (ID=400072, Service=4)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LAST_DAY_TRADE_FUTURE" (ID=400074, Service=4)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_TRADE_FUTURE_PMS" (ID=400075, Service=4)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_PORTFOLIO_RFCQ_REQUEST" (ID=400076, Service=4)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_PORTFOLIO_RFCQ_DEALER_LIST_PREVIEW" (ID=400077, Service=4)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_PORTFOLIO_RFCQ" (ID=400078, Service=4)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_PORTFOLIO_RFCQ_QUOTE" (ID=400079, Service=4)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_PORTFOLIO_RFCQ_DEPTH" (ID=400081, Service=4)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_PORTFOLIO_RFCQ_SYNTHETIC_BOOK" (ID=400082, Service=4)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_PORTFOLIO_RFCQ_ORDER" (ID=400083, Service=4)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_PORTFOLIO_RFCQ_BUY_SIDE_SUMMARY" (ID=400085, Service=4)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_PORTFOLIO_RFCQ_BUY_SIDE_SUMMARY_LEG" (ID=400086, Service=4)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LAST_DAY_PORTFOLIO_RFCQ_BUY_SIDE_SUMMARY" (ID=400089, Service=4)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LAST_DAY_PORTFOLIO_RFCQ_BUY_SIDE_SUMMARY_LEG" (ID=400090, Service=4)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_PORTFOLIO_RFCQ_SELL_SIDE_SUMMARY" (ID=400091, Service=4)
+2026-02-12 11:04:25.960 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_PORTFOLIO_RFCQ_SELL_SIDE_SUMMARY_LEG" (ID=400092, Service=4)
+2026-02-12 11:04:25.961 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LAST_DAY_PORTFOLIO_RFCQ_SELL_SIDE_SUMMARY" (ID=400095, Service=4)
+2026-02-12 11:04:25.961 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LAST_DAY_PORTFOLIO_RFCQ_SELL_SIDE_SUMMARY_LEG" (ID=400096, Service=4)
+2026-02-12 11:04:25.961 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_MWC_BOND" (ID=400019, Service=2)
+2026-02-12 11:04:25.961 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_DEALER_BRANCH" (ID=400100, Service=4)
+2026-02-12 11:04:25.961 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_BOND_TRANSPARENCY_DEFERRAL_ATTRIBUTES" (ID=100240, Service=2)
+2026-02-12 11:04:25.961 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_BOND_LISTING_REQUEST" (ID=400102, Service=4)
+2026-02-12 11:04:25.961 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_CANCEL_PORTFOLIO_RFCQ" (ID=115012, Service=4)
+2026-02-12 11:04:25.961 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RATING_CATEGORY" (ID=400103, Service=2)
+2026-02-12 11:04:25.961 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_TRADE_SALES_DEFINITION" (ID=400105, Service=4)
+2026-02-12 11:04:25.961 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LAST_DAY_TRADE_SALES_DEFINITION" (ID=400106, Service=4)
+2026-02-12 11:04:25.961 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_MEMBER_SALES_EXCEPTION" (ID=400104, Service=4)
+2026-02-12 11:04:25.961 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_MOC_FIXING_PRICE" (ID=400101, Service=4)
+2026-02-12 11:04:25.961 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_MOC_FIXING_PRICE_FLOW" (ID=115011, Service=4)
+2026-02-12 11:04:25.961 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_SERVICE_PROVIDER" (ID=100001, Service=2)
+2026-02-12 11:04:25.961 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_MARKET" (ID=100003, Service=2)
+2026-02-12 11:04:25.961 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_SECTION" (ID=100004, Service=2)
+2026-02-12 11:04:25.961 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_MARKET_PHASE" (ID=100005, Service=2)
+2026-02-12 11:04:25.962 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_PHASE_SECTION" (ID=100006, Service=2)
+2026-02-12 11:04:25.962 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_CURRENCY" (ID=100007, Service=2)
+2026-02-12 11:04:25.962 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_COUNTRY" (ID=100008, Service=2)
+2026-02-12 11:04:25.962 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_CALENDAR" (ID=100009, Service=2)
+2026-02-12 11:04:25.962 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_CALENDAR_WDAY" (ID=100010, Service=2)
+2026-02-12 11:04:25.962 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_CALENDAR_HOLIDAY" (ID=100011, Service=2)
+2026-02-12 11:04:25.962 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_ISSUER" (ID=100012, Service=2)
+2026-02-12 11:04:25.962 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_INDUSTRY" (ID=100013, Service=2)
+2026-02-12 11:04:25.962 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_RESIDUAL_MATURITY" (ID=100014, Service=2)
+2026-02-12 11:04:25.962 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_INSTRUMENT_CLASS" (ID=100015, Service=2)
+2026-02-12 11:04:25.962 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_CALENDAR_EXCEPTION" (ID=100016, Service=2)
+2026-02-12 11:04:25.962 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_INSTRUMENT_RATING" (ID=100017, Service=2)
+2026-02-12 11:04:25.962 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_COUPON_PLAN" (ID=100018, Service=2)
+2026-02-12 11:04:25.962 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_INSTRUMENT" (ID=100019, Service=2)
+2026-02-12 11:04:25.962 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_MEMBER" (ID=100020, Service=2)
+2026-02-12 11:04:25.962 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_INSTRUMENT_CLASS_SECTION" (ID=100021, Service=2)
+2026-02-12 11:04:25.963 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_TRADER_GROUP_SUSPENSION" (ID=100022, Service=4)
+2026-02-12 11:04:25.963 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_TRADER_INSTR_ACCESS_RIGHT" (ID=100024, Service=4)
+2026-02-12 11:04:25.963 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_TRADER" (ID=100025, Service=4)
+2026-02-12 11:04:25.963 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_TRADER_MARKET_ACCESS_RIGHT" (ID=100027, Service=4)
+2026-02-12 11:04:25.963 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_SETTL_SYSTEM" (ID=100028, Service=2)
+2026-02-12 11:04:25.963 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_SETTL_GROUP_INFO" (ID=100029, Service=2)
+2026-02-12 11:04:25.963 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_RATES" (ID=100030, Service=2)
+2026-02-12 11:04:25.963 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_MARKET_STATUS" (ID=100033, Service=2)
+2026-02-12 11:04:25.963 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_SECTION_PHASE_STATUS" (ID=100034, Service=2)
+2026-02-12 11:04:25.963 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_MEMBER_STATUS" (ID=100035, Service=4)
+2026-02-12 11:04:25.963 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_TRADER_STATUS" (ID=100036, Service=4)
+2026-02-12 11:04:25.963 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_MAIL" (ID=100037, Service=4)
+2026-02-12 11:04:25.963 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_SUSPENSION" (ID=100038, Service=2)
+2026-02-12 11:04:25.963 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_MEMBER_SECTION" (ID=100040, Service=2)
+2026-02-12 11:04:25.963 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_MEMBER_SECTION_INSTRUMENT_CLASS" (ID=100041, Service=2)
+2026-02-12 11:04:25.963 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_TRADER_GROUPS" (ID=100042, Service=4)
+2026-02-12 11:04:25.963 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_CREDIT_LINE_ECL" (ID=100043, Service=4)
+2026-02-12 11:04:25.963 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_CREDIT_LINE_NCL" (ID=100044, Service=4)
+2026-02-12 11:04:25.963 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_FUTURE_DELIVERY" (ID=100045, Service=2)
+2026-02-12 11:04:25.964 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_UPLOAD" (ID=100046, Service=2)
+2026-02-12 11:04:25.964 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_FUTURE" (ID=100048, Service=2)
+2026-02-12 11:04:25.964 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_DESC_CLASS" (ID=100049, Service=2)
+2026-02-12 11:04:25.964 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_DESC_CLASS_FIELD" (ID=100050, Service=2)
+2026-02-12 11:04:25.964 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_DESC_CLASS_KEY" (ID=100051, Service=2)
+2026-02-12 11:04:25.964 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_DESC_CLASS_SEGKEY" (ID=100052, Service=2)
+2026-02-12 11:04:25.964 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_TRADER_PLATFORM_ACCESS_RIGHT" (ID=100053, Service=4)
+2026-02-12 11:04:25.964 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_FUTURE_EXCHANGE" (ID=100057, Service=2)
+2026-02-12 11:04:25.964 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_MARKET_FUNCTION_PROFILE" (ID=100058, Service=2)
+2026-02-12 11:04:25.964 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_MARKET_FUNCTION" (ID=100059, Service=2)
+2026-02-12 11:04:25.964 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_MEMBER_SECTION_INSTRUMENT_CLASS_EXCEPTION" (ID=100060, Service=2)
+2026-02-12 11:04:25.964 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_INSTRUMENT_CLASS_ENABLE" (ID=100061, Service=4)
+2026-02-12 11:04:25.964 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_MEMBER_ACCOUNT" (ID=100064, Service=4)
+2026-02-12 11:04:25.964 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_SELL_SIDE_MEMBER" (ID=100066, Service=4)
+2026-02-12 11:04:25.964 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_TRADER_CONNECTION_INFO" (ID=100067, Service=4)
+2026-02-12 11:04:25.964 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_MEMBER_SALES_CONFIG" (ID=100068, Service=4)
+2026-02-12 11:04:25.964 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_TRADING_CAPS" (ID=100069, Service=4)
+2026-02-12 11:04:25.964 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_MULTIMEMBER_TRADER" (ID=100075, Service=4)
+2026-02-12 11:04:25.965 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_EXCHANGE_RATE" (ID=100076, Service=2)
+2026-02-12 11:04:25.965 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_MEMBER_ACCOUNT_INFO" (ID=100077, Service=4)
+2026-02-12 11:04:25.965 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_TRADING_RELATION_TRADER" (ID=100078, Service=4)
+2026-02-12 11:04:25.965 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_PRICE" (ID=100079, Service=2)
+2026-02-12 11:04:25.965 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_INSTRUMENT_ANALYTICS" (ID=100083, Service=4)
+2026-02-12 11:04:25.965 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_INFLATION_INDEX" (ID=100089, Service=2)
+2026-02-12 11:04:25.965 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_TRADING_RELATION_TRADER_EXCEPTION" (ID=100095, Service=4)
+2026-02-12 11:04:25.965 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_SALES_GROUP" (ID=100096, Service=4)
+2026-02-12 11:04:25.965 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_SALES_GROUP_CONFIG" (ID=100097, Service=4)
+2026-02-12 11:04:25.965 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_SALES_GROUP_DEFINITION" (ID=100098, Service=4)
+2026-02-12 11:04:25.965 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_TRADER_INFO" (ID=100099, Service=4)
+2026-02-12 11:04:25.965 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_MEMBER_CONNECTION_INFO" (ID=100200, Service=4)
+2026-02-12 11:04:25.966 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_BUY_SIDE_TRADING_LIST" (ID=100201, Service=4)
+2026-02-12 11:04:25.966 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_SELL_SIDE_TRADING_LIST" (ID=100202, Service=4)
+2026-02-12 11:04:25.966 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_TYPE_EXCEPTION" (ID=100205, Service=4)
+2026-02-12 11:04:25.966 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_BUY_SIDE_TRADING_LIST_LEG_INFO" (ID=100206, Service=4)
+2026-02-12 11:04:25.966 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_SELL_SIDE_TRADING_LIST_LEG_INFO" (ID=100207, Service=4)
+2026-02-12 11:04:25.966 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_PRODUCT_TYPE" (ID=100208, Service=2)
+2026-02-12 11:04:25.966 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_BROKER" (ID=100209, Service=2)
+2026-02-12 11:04:25.966 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_MEMBER_ACCOUNT_EXCEPTION" (ID=100212, Service=4)
+2026-02-12 11:04:25.966 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_BUY_SIDE_TRADING_LIST_LEG_REJECT" (ID=100217, Service=4)
+2026-02-12 11:04:25.966 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_SELL_SIDE_TRADING_LIST_LEG_REJECT" (ID=100218, Service=4)
+2026-02-12 11:04:25.966 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_MKT_AFFILIATION" (ID=100222, Service=2)
+2026-02-12 11:04:25.966 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_INSTRUMENT_CLASS_AREA_CODE_MKTAFF" (ID=100223, Service=2)
+2026-02-12 11:04:25.966 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_TRADING_RELATION_EXCEPTION" (ID=100224, Service=4)
+2026-02-12 11:04:25.966 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_TRADING_RELATION" (ID=100226, Service=4)
+2026-02-12 11:04:25.966 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_MINORITY_BROKER_MEMBER_INFO" (ID=100227, Service=4)
+2026-02-12 11:04:25.966 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_INSTRUMENT_ALT_CODE" (ID=100228, Service=2)
+2026-02-12 11:04:25.966 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_AREA_CODE" (ID=100229, Service=2)
+2026-02-12 11:04:25.966 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_AREA_CODE_RELATION" (ID=100230, Service=2)
+2026-02-12 11:04:25.966 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_TEMPLATE_PLATFORM_ACCESS_RIGHT" (ID=100233, Service=2)
+2026-02-12 11:04:25.967 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_TEMPLATE_MARKET_ACCESS_RIGHT" (ID=100234, Service=2)
+2026-02-12 11:04:25.967 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_TEMPLATE_INSTR_ACCESS_RIGHT" (ID=100235, Service=2)
+2026-02-12 11:04:25.967 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_INTRADAY_UPDATE_NOTIFICATION" (ID=100236, Service=2)
+2026-02-12 11:04:25.967 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_ESG_BOND_TYPE" (ID=100237, Service=2)
+2026-02-12 11:04:25.967 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_ESG_COMPLIANCE_CODE" (ID=100238, Service=2)
+2026-02-12 11:04:25.967 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_ESG_BOND" (ID=100239, Service=2)
+2026-02-12 11:04:25.967 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_PRICE_FLOW" (ID=100800, Service=4)
+2026-02-12 11:04:25.967 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_EXCHANGE_RATE_FLOW" (ID=100801, Service=4)
+2026-02-12 11:04:25.967 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_GOV_MANAGE_FILL_REQ" (ID=100803, Service=4)
+2026-02-12 11:04:25.967 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_SUSPENSION_GOV" (ID=100804, Service=4)
+2026-02-12 11:04:25.967 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_REQUEST_OP" (ID=100806, Service=4)
+2026-02-12 11:04:25.967 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_CANCEL_INVENTORY_QUOTE" (ID=100808, Service=4)
+2026-02-12 11:04:25.967 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_CANCEL_ORDER_STAGING" (ID=100809, Service=4)
+2026-02-12 11:04:25.967 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_CANCEL_RFCQ" (ID=100810, Service=4)
+2026-02-12 11:04:25.967 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_RFCQ_MARKET_PARAMS_UPDATE" (ID=100811, Service=4)
+2026-02-12 11:04:25.967 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_RESET_PASSWORD" (ID=100812, Service=4)
+2026-02-12 11:04:25.967 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_FORCE_DISCONNECTION" (ID=100813, Service=4)
+2026-02-12 11:04:25.968 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_TRADING_RELATION_COUNT" (ID=100814, Service=4)
+2026-02-12 11:04:25.968 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_RFCQ_INSTRUMENT_CLASS_PARAMS_UPDATE" (ID=100815, Service=4)
+2026-02-12 11:04:25.968 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_SETTL_GROUP_INFO_PARAMS_UPDATE" (ID=100816, Service=4)
+2026-02-12 11:04:25.968 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_INSTRUMENT_RATING_FLOW" (ID=100817, Service=4)
+2026-02-12 11:04:25.968 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_TRADING_RELATION_GOV" (ID=100818, Service=4)
+2026-02-12 11:04:25.968 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_FIXING_RATE_FLOW" (ID=100821, Service=4)
+2026-02-12 11:04:25.968 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LOG_RFCQ_INSTRUMENT_CLASS_ENABLE" (ID=100824, Service=4)
+2026-02-12 11:04:25.968 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LOG_RFCQ_TRADING_RELATION" (ID=100825, Service=4)
+2026-02-12 11:04:25.968 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LOG_RFCQ_TRADING_RELATION_EXCEPTION" (ID=100826, Service=4)
+2026-02-12 11:04:25.968 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LOG_RFCQ_TRADING_RELATION_TRADER_EXCEPTION" (ID=100827, Service=4)
+2026-02-12 11:04:25.968 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LOG_MEMBER_SALES_CONFIG" (ID=100830, Service=4)
+2026-02-12 11:04:25.968 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_LOG_SALES_GROUP" (ID=100831, Service=4)
+2026-02-12 11:04:25.968 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_LOG_SALES_GROUP_CONFIG" (ID=100832, Service=4)
+2026-02-12 11:04:25.968 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_LOG_SALES_GROUP_DEFINITION" (ID=100833, Service=4)
+2026-02-12 11:04:25.968 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_LOG_TRADING_CAPS" (ID=100834, Service=4)
+2026-02-12 11:04:25.968 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_TRADING_RELATION_TRADER_EXC_COUNT" (ID=100835, Service=4)
+2026-02-12 11:04:25.968 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LOG_RFCQ_TYPE_EXCEPTION" (ID=100836, Service=4)
+2026-02-12 11:04:25.968 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_FIX_SESSION" (ID=100837, Service=4)
+2026-02-12 11:04:25.968 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_FIX_SESSION_CONFIG" (ID=100838, Service=4)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "TI_FIX_SESSION_STATUS" (ID=100839, Service=4)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "GOV_TI_TRADER" (ID=100850, Service=4)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "GOV_TI_TRADER_INSTR_ACCESS_RIGHT" (ID=100851, Service=4)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "GOV_TI_TRADER_MARKET_ACCESS_RIGHT" (ID=100852, Service=4)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "GOV_TI_TRADER_PLATFORM_ACCESS_RIGHT" (ID=100853, Service=4)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_QUOTATION_LIMIT" (ID=114000, Service=5)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_GROUP_RFCQ_OPTION" (ID=114001, Service=5)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_BOND" (ID=114002, Service=5)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INSTRUMENT_MODALITY" (ID=114003, Service=5)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INSTRUMENT_SECTION" (ID=114004, Service=5)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_MARKET_PARAMS" (ID=114100, Service=2)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_SETTLEMENT_GROUP_MEMBER" (ID=114101, Service=2)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_INSTRUMENT_SECTION" (ID=114102, Service=2)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_INSTRUMENT_CLASS" (ID=114107, Service=2)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LINKED_MEMBERS" (ID=114108, Service=4)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_INSTRUMENT_GROUP" (ID=114110, Service=2)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_AUTO_EXECUTION_REPORT" (ID=114111, Service=4)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_AUTO_EXECUTION_RULE_PRIORITY" (ID=114112, Service=4)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LAST_DEAL" (ID=114113, Service=2)
+2026-02-12 11:04:25.969 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_DEAL" (ID=114116, Service=4)
+2026-02-12 11:04:25.970 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_TRADE" (ID=114117, Service=4)
+2026-02-12 11:04:25.970 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_OFFICIAL_PRICE" (ID=114122, Service=2)
+2026-02-12 11:04:25.970 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_VOLUME_MARKET_STATISTIC" (ID=114124, Service=2)
+2026-02-12 11:04:25.970 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_TRADABLE_INSTRUMENT_STATISTIC" (ID=114146, Service=2)
+2026-02-12 11:04:25.970 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_FINANCIAL_INSTRUMENT_STATISTIC" (ID=114147, Service=2)
+2026-02-12 11:04:25.970 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_INSTRUMENT_GROUP_DEFINITION" (ID=114157, Service=2)
+2026-02-12 11:04:25.970 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_CUSTOM_INSTRUMENT_GROUP" (ID=114158, Service=4)
+2026-02-12 11:04:25.970 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_CUSTOM_INSTRUMENT_GROUP_DEFINITION" (ID=114159, Service=4)
+2026-02-12 11:04:25.970 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_WITHDRAW" (ID=114160, Service=4)
+2026-02-12 11:04:25.970 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_BEST" (ID=114161, Service=2)
+2026-02-12 11:04:25.970 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_INVENTORY_DEPTH" (ID=114162, Service=4)
+2026-02-12 11:04:25.970 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_DEPTH" (ID=114163, Service=4)
+2026-02-12 11:04:25.970 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_INVENTORY_QUOTE" (ID=114166, Service=4)
+2026-02-12 11:04:25.970 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_QUOTE" (ID=114167, Service=4)
+2026-02-12 11:04:25.970 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_INVENTORY_QUICK_EDIT" (ID=114170, Service=4)
+2026-02-12 11:04:25.970 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_QUICK_EDIT" (ID=114171, Service=4)
+2026-02-12 11:04:25.970 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_ORDER" (ID=114175, Service=4)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_ORDER_STAGING" (ID=114177, Service=4)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_REQUEST" (ID=114178, Service=4)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ" (ID=114179, Service=4)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_MIFID_DEFAULT_INFO" (ID=114180, Service=4)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_BUY_SIDE_SUMMARY" (ID=114280, Service=4)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_SELL_SIDE_SUMMARY" (ID=114282, Service=4)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_INVENTORY_GROUP" (ID=114292, Service=4)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_INVENTORY_GROUP_MEMBER" (ID=114293, Service=4)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_TRADE_SPLIT" (ID=114294, Service=4)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_MESSAGE" (ID=114295, Service=4)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_INSTRUMENT_MODALITY" (ID=114297, Service=2)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_MANUAL_AUTO_EXECUTION" (ID=114298, Service=4)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_DEAL_PMS" (ID=114300, Service=4)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_CUTOFF" (ID=114301, Service=2)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LAST_DAY_RFCQ_BUY_SIDE_SUMMARY" (ID=114302, Service=4)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LAST_DAY_RFCQ_SELL_SIDE_SUMMARY" (ID=114303, Service=4)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LAST_DAY_TRADE" (ID=114304, Service=4)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_INVENTORY_DEALERS" (ID=114308, Service=2)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RFCQ_SYNTHETIC_BOOK" (ID=114315, Service=4)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_BUY_SIDE_INVENTORY_ORDER" (ID=114528, Service=4)
+2026-02-12 11:04:25.971 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_HIST_BUY_SIDE_INVENTORY_ORDER" (ID=114529, Service=4)
+2026-02-12 11:04:25.972 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LAST_DAY_BUY_SIDE_INVENTORY_ORDER" (ID=114530, Service=4)
+2026-02-12 11:04:25.972 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_SELL_SIDE_INVENTORY_ORDER" (ID=114531, Service=4)
+2026-02-12 11:04:25.972 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LAST_DAY_SELL_SIDE_INVENTORY_ORDER" (ID=114533, Service=4)
+2026-02-12 11:04:25.972 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_RESIDUAL_MATURITY_BENCHMARK" (ID=114534, Service=2)
+2026-02-12 11:04:25.972 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_IC_SECTION_ADJUSTMENT" (ID=114536, Service=2)
+2026-02-12 11:04:25.972 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_PRICE_ALERT" (ID=114539, Service=4)
+2026-02-12 11:04:25.972 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_QUOTATION_LIMIT" (ID=114540, Service=2)
+2026-02-12 11:04:25.972 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_BUY_SIDE_INVENTORY_ORDER" (ID=114601, Service=5)
+2026-02-12 11:04:25.972 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_SELL_SIDE_INVENTORY_ORDER" (ID=114602, Service=5)
+2026-02-12 11:04:25.972 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_RFCQ_TRADE_SUMMARY" (ID=114603, Service=5)
+2026-02-12 11:04:25.972 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_RFCQ_INSTRUMENT_SUMMARY" (ID=114604, Service=5)
+2026-02-12 11:04:25.972 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_BUYBACK_PRICE" (ID=114609, Service=5)
+2026-02-12 11:04:25.972 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_DEAL" (ID=114701, Service=5)
+2026-02-12 11:04:25.972 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_TRADE" (ID=114705, Service=5)
+2026-02-12 11:04:25.972 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_RFCQ_QUOTE" (ID=114712, Service=5)
+2026-02-12 11:04:25.972 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_INVENTORY_QUOTE" (ID=114713, Service=2)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_RFCQ_REQUEST" (ID=114714, Service=5)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_RFCQ" (ID=114715, Service=5)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_ORDER_STAGING" (ID=114716, Service=5)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_RFCQ_ORDER" (ID=114717, Service=5)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "GOV_BV_OFFICIAL_PRICE_PREVIEW" (ID=114802, Service=4)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "GOV_BV_TRADE" (ID=114803, Service=4)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_INVENTORY_GROUP_MEMBER_COUNT" (ID=114805, Service=4)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "GOV_BV_INSTRUMENT_GROUP" (ID=114806, Service=4)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "GOV_BV_INSTRUMENT_GROUP_DEFINITION" (ID=114807, Service=4)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_SETTL_GROUP_MEMBER_PARAMS_UPDATE" (ID=114808, Service=4)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "GOV_BV_TRADE_UPDATE" (ID=114813, Service=4)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LOG_INVENTORY_GROUP" (ID=114817, Service=4)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_LOG_INVENTORY_GROUP_MEMBER" (ID=114818, Service=4)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "GOV_BV_BEST_GROUP_DEFINITION" (ID=115000, Service=4)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_REFERENCE_QUOTATION_FLOW" (ID=115003, Service=4)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "GOV_BV_QUOTATION_LIMIT" (ID=115004, Service=4)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_BENCHMARK_INDEX_VALUE_FLOW" (ID=115005, Service=4)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_CANCEL_IOI" (ID=115006, Service=4)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "BV_CURVE_FLOW" (ID=115007, Service=4)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "GOV_BV_BLOCK_MEMBER" (ID=115008, Service=4)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "GOV_BV_TRADE_FUTURE" (ID=115009, Service=4)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "GOV_BV_EUREX_ACCOUNT" (ID=115010, Service=4)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "CONF_CLASS_MARKET" (ID=140008, Service=2)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "CONF_PROFILE_RIGHTS" (ID=140009, Service=2)
+2026-02-12 11:04:25.973 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "CONF_CLASS_MAPPING" (ID=140013, Service=2)
+2026-02-12 11:04:25.974 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "CONF_CLASS_FIELDVALUE" (ID=140014, Service=2)
+2026-02-12 11:04:25.974 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "CONF_CLASS_FILTERTYPE" (ID=140018, Service=2)
+2026-02-12 11:04:25.974 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "CONF_FILTER" (ID=140029, Service=2)
+2026-02-12 11:04:25.974 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_TI_TRADER_STATUS" (ID=170001, Service=5)
+2026-02-12 11:04:25.974 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_TI_MEMBER_STATUS" (ID=170002, Service=5)
+2026-02-12 11:04:25.974 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_TRADER_DISCONNECTION" (ID=170003, Service=5)
+2026-02-12 11:04:25.974 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_TI_TRADER" (ID=170006, Service=5)
+2026-02-12 11:04:25.974 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_TI_TRADER_GROUP_SUSPENSION" (ID=170009, Service=5)
+2026-02-12 11:04:25.974 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_TI_CONNECTION_INFO" (ID=170013, Service=5)
+2026-02-12 11:04:25.974 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_TI_EXCHANGE_RATE" (ID=170014, Service=5)
+2026-02-12 11:04:25.974 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_RFCQ_INSTRUMENT_CLASS_ENABLE" (ID=170015, Service=5)
+2026-02-12 11:04:25.974 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_RFCQ_TRADING_RELATION" (ID=170016, Service=5)
+2026-02-12 11:04:25.974 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_RFCQ_TRADING_RELATION_EXCEPTION" (ID=170017, Service=5)
+2026-02-12 11:04:25.974 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_TI_TRADING_CAPS" (ID=170018, Service=5)
+2026-02-12 11:04:25.974 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_RFCQ_TRADING_RELATION_TRADER_EXCEPTION" (ID=170022, Service=5)
+2026-02-12 11:04:25.974 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_RFCQ_TYPE_EXCEPTION" (ID=170025, Service=5)
+2026-02-12 11:04:25.974 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "DF_BV_IOI" (ID=170026, Service=5)
+2026-02-12 11:04:25.974 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "IGN_INT_DF_BV_TRADE" (ID=150356, Service=5)
+2026-02-12 11:04:25.974 [main] DEBUG c.m.g.service.CsvClassLoaderService - Added class: "IGN_INT_BV_RFCQ_BUY_SIDE_SUMMARY" (ID=150363, Service=4)
+2026-02-12 11:04:25.975 [main] INFO  c.m.g.service.CsvClassLoaderService - Loaded 386 classes from 386 lines in CSV file
+2026-02-12 11:04:25.975 [main] INFO  c.m.g.service.CsvClassLoaderService - Successfully loaded 386 classes from CSV: /app/config/classes_BV.csv
+2026-02-12 11:04:25.976 [main] INFO  c.m.g.r.ClassMetadataRepository - Initializing Class Metadata Repository
+2026-02-12 11:04:25.976 [main] INFO  c.m.g.r.ClassMetadataRepository - Using CSV class loader with 386 classes
+2026-02-12 11:04:26.222 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-02-12 11:04:26.245 [main] INFO  o.s.b.a.w.s.WelcomePageHandlerMapping - Adding welcome page: class path resource [static/index.html]
+2026-02-12 11:04:26.599 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path ''
+2026-02-12 11:04:26.626 [scheduling-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Running connection pool health check
+2026-02-12 11:04:26.627 [main] INFO  com.mts.gateway.GatewayApplication - Started GatewayApplication in 6.289 seconds (process running for 6.805)
+2026-02-12 11:04:56.616 [scheduling-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Running connection pool health check
+2026-02-12 11:05:11.750 [http-nio-8080-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-02-12 11:05:11.750 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-02-12 11:05:11.752 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 2 ms
+2026-02-12 11:05:11.890 [http-nio-8080-exec-1] INFO  c.m.g.controller.AuthController - Login request from user: TRADER@35240
+2026-02-12 11:05:11.890 [http-nio-8080-exec-1] INFO  c.m.g.controller.AuthController - IPSP: 10.232.92.86:12001
+2026-02-12 11:05:11.890 [http-nio-8080-exec-1] INFO  com.mts.gateway.service.AuthService - Attempting login for user: TRADER@35240
+2026-02-12 11:05:11.890 [http-nio-8080-exec-1] INFO  com.mts.gateway.service.AuthService - Connecting to IPSP at 10.232.92.86:12001
+2026-02-12 11:05:11.891 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Preparing CompletableFuture for address service response
+2026-02-12 11:05:11.892 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - ========================================
+2026-02-12 11:05:11.892 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Connecting to IPSP: 10.232.92.86:12001
+2026-02-12 11:05:11.892 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Service: IPSP_ADDRESS_SERVICE
+2026-02-12 11:05:11.892 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Username: TRADER@35240
+2026-02-12 11:05:11.892 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Connection ID: d1d4458e-ace8-4c27-9877-2b6d21f09c8c
+2026-02-12 11:05:11.892 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - ========================================
+2026-02-12 11:05:11.892 [http-nio-8080-exec-1] DEBUG com.mts.gateway.sdp.SDPConnection - Creating TCP context...
+2026-02-12 11:05:11.892 [http-nio-8080-exec-1] DEBUG com.mts.gateway.sdp.SDPConnection - Creating address service context and channel for IPSP...
+2026-02-12 11:05:11.928 [http-nio-8080-exec-1] DEBUG com.mts.gateway.sdp.SDPConnection - Connecting to IPSP...
+Enter Demultiplexor::run thread=Thread-3 total=1
+2026-02-12 11:05:11.934 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - ✓ Connected successfully to 10.232.92.86:12001
+2026-02-12 11:05:11.934 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Waiting for onConnected() callback...
+2026-02-12 11:05:11.946 [Thread-3] INFO  com.mts.gateway.sdp.SDPConnection - === Address service channel connected to 10.232.92.86:12001 ===
+2026-02-12 11:05:11.946 [Thread-3] INFO  com.mts.gateway.sdp.SDPConnection - Preparing login request for user: TRADER@35240
+2026-02-12 11:05:11.954 [Thread-3] INFO  com.mts.gateway.sdp.SDPConnection - Sending login request with service type: IP_Request (IP_Request)
+2026-02-12 11:05:11.955 [Thread-3] INFO  com.mts.gateway.sdp.SDPConnection - Login request sent successfully
+2026-02-12 11:05:12.266 [InputBlockSwitcher Channel 1 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection - Address service logged in: LoginOK
+2026-02-12 11:05:12.266 [InputBlockSwitcher Channel 1 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection - Login successful, requesting address service information...
+2026-02-12 11:05:12.266 [InputBlockSwitcher Channel 1 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection - Address service request sent
+2026-02-12 11:05:12.322 [InputBlockSwitcher Channel 2 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection - === Address service response received ===
+2026-02-12 11:05:12.322 [InputBlockSwitcher Channel 2 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection - ReqId: 0
+2026-02-12 11:05:12.322 [InputBlockSwitcher Channel 2 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection - Processing 20 platforms...
+2026-02-12 11:05:12.322 [InputBlockSwitcher Channel 2 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection - Platform ID: 6
+2026-02-12 11:05:12.322 [InputBlockSwitcher Channel 2 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection -   Service: INFO_BRT -> 10.232.92.86    :22034
+2026-02-12 11:05:12.322 [InputBlockSwitcher Channel 2 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection -   Service: TXN_INFO_PRIV -> 10.232.92.86    :22031
+2026-02-12 11:05:12.322 [InputBlockSwitcher Channel 2 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection -   Service: QUERY -> 10.232.92.86    :22031
+2026-02-12 11:05:12.322 [InputBlockSwitcher Channel 2 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection -   Service: IP_Request ->                 :0
+2026-02-12 11:05:12.322 [InputBlockSwitcher Channel 2 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection -   Service: IP_Request ->                 :0
+2026-02-12 11:05:12.322 [InputBlockSwitcher Channel 2 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection -   Service: IP_Request ->                 :0
+2026-02-12 11:05:12.322 [InputBlockSwitcher Channel 2 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection -   Service: IP_Request ->                 :0
+2026-02-12 11:05:12.322 [InputBlockSwitcher Channel 2 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection -   Service: IP_Request ->                 :0
+2026-02-12 11:05:12.322 [InputBlockSwitcher Channel 2 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection -   Service: IP_Request ->                 :0
+2026-02-12 11:05:12.322 [InputBlockSwitcher Channel 2 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection -   Service: IP_Request ->                 :0
+2026-02-12 11:05:12.322 [InputBlockSwitcher Channel 2 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection - === Address service processing completed ===
+2026-02-12 11:05:12.322 [InputBlockSwitcher Channel 2 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection - Address service future completed successfully
+2026-02-12 11:05:12.934 [http-nio-8080-exec-1] INFO  com.mts.gateway.service.AuthService - Successfully logged in to IPSP
+2026-02-12 11:05:12.935 [http-nio-8080-exec-1] INFO  com.mts.gateway.service.AuthService - Requesting address service information for all enabled markets
+2026-02-12 11:05:12.935 [http-nio-8080-exec-1] INFO  com.mts.gateway.service.AuthService - Sending AddressServiceReqExt to IPSP
+2026-02-12 11:05:12.935 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Waiting for address service response (request was sent automatically after login)...
+2026-02-12 11:05:12.935 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Address service response received successfully
+2026-02-12 11:05:12.935 [http-nio-8080-exec-1] INFO  com.mts.gateway.service.AuthService - Received address service response
+2026-02-12 11:05:12.935 [http-nio-8080-exec-1] INFO  com.mts.gateway.service.AuthService - Initializing connections for platform ID: 6
+2026-02-12 11:05:12.935 [http-nio-8080-exec-1] INFO  c.mts.gateway.sdp.SDPConnectionPool - Filtering address service response for platform ID: 6
+2026-02-12 11:05:12.935 [http-nio-8080-exec-1] INFO  c.mts.gateway.sdp.SDPConnectionPool - Found target platform 6 in address service response
+2026-02-12 11:05:12.935 [http-nio-8080-exec-1] INFO  c.mts.gateway.sdp.SDPConnectionPool - Processing 10 services from platform 6...
+2026-02-12 11:05:12.935 [http-nio-8080-exec-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Service: type=INFO_BRT, address='10.232.92.86    ', port=22034
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] INFO  c.mts.gateway.sdp.SDPConnectionPool - Mapped service INFO_BRT -> INFO_BRT (10.232.92.86    :22034)
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Service: type=TXN_INFO_PRIV, address='10.232.92.86    ', port=22031
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] INFO  c.mts.gateway.sdp.SDPConnectionPool - Mapped service TXN_INFO_PRIV -> TXN_INFO_PRIV (10.232.92.86    :22031)
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Service: type=QUERY, address='10.232.92.86    ', port=22031
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] INFO  c.mts.gateway.sdp.SDPConnectionPool - Mapped service QUERY -> QUERY (10.232.92.86    :22031)
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Service: type=IP_Request, address='                ', port=0
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Service: type=IP_Request, address='                ', port=0
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Service: type=IP_Request, address='                ', port=0
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Service: type=IP_Request, address='                ', port=0
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Service: type=IP_Request, address='                ', port=0
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Service: type=IP_Request, address='                ', port=0
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Service: type=IP_Request, address='                ', port=0
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] INFO  c.mts.gateway.sdp.SDPConnectionPool - Creating connections for service QUERY to 10.232.92.86    :22031
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] DEBUG com.mts.gateway.sdp.SDPConnection - WebSocket handler set for connection b16ce0b6-6dc1-4739-a439-86b53a161cbf
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - ========================================
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Connecting to Access Point: 10.232.92.86:22031
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Service: QUERY
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Username: TRADER@35240
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Connection ID: b16ce0b6-6dc1-4739-a439-86b53a161cbf
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - ========================================
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] DEBUG com.mts.gateway.sdp.SDPConnection - Creating TCP context...
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] DEBUG com.mts.gateway.sdp.SDPConnection - Creating channels for Access Point...
+2026-02-12 11:05:12.936 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Creating transaction channel for QUERY service...
+2026-02-12 11:05:12.941 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - About to connect transaction channel:
+2026-02-12 11:05:12.941 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection -   host = '10.232.92.86' (length=12, null=false)
+2026-02-12 11:05:12.941 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection -   port = 22031
+2026-02-12 11:05:12.942 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Transaction channel connect() method completed
+2026-02-12 11:05:12.942 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - ✓ Connected successfully to 10.232.92.86:22031
+2026-02-12 11:05:12.942 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Waiting for onConnected() callback...
+2026-02-12 11:05:12.942 [http-nio-8080-exec-1] INFO  c.mts.gateway.sdp.SDPConnectionPool - Created connection b16ce0b6-6dc1-4739-a439-86b53a161cbf for service QUERY (market 6)
+2026-02-12 11:05:12.942 [http-nio-8080-exec-1] INFO  c.mts.gateway.sdp.SDPConnectionPool - Creating connections for service INFO_BRT to 10.232.92.86    :22034
+2026-02-12 11:05:12.942 [http-nio-8080-exec-1] DEBUG com.mts.gateway.sdp.SDPConnection - WebSocket handler set for connection 3d0c63ec-c838-468a-9b60-494b96960b80
+2026-02-12 11:05:12.942 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - ========================================
+2026-02-12 11:05:12.942 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Connecting to Access Point: 10.232.92.86:22034
+2026-02-12 11:05:12.942 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Service: INFO_BRT
+2026-02-12 11:05:12.942 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Username: TRADER@35240
+2026-02-12 11:05:12.942 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Connection ID: 3d0c63ec-c838-468a-9b60-494b96960b80
+2026-02-12 11:05:12.942 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - ========================================
+2026-02-12 11:05:12.942 [http-nio-8080-exec-1] DEBUG com.mts.gateway.sdp.SDPConnection - Creating TCP context...
+2026-02-12 11:05:12.942 [http-nio-8080-exec-1] DEBUG com.mts.gateway.sdp.SDPConnection - Creating channels for Access Point...
+2026-02-12 11:05:12.942 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Creating broadcast channel for INFO_BRT service...
+2026-02-12 11:05:12.944 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - About to connect broadcast channel:
+2026-02-12 11:05:12.944 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection -   host = '10.232.92.86' (length=12, null=false)
+2026-02-12 11:05:12.944 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection -   port = 22034
+2026-02-12 11:05:12.944 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Broadcast channel connect() method completed
+2026-02-12 11:05:12.944 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - ✓ Connected successfully to 10.232.92.86:22034
+2026-02-12 11:05:12.944 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Waiting for onConnected() callback...
+2026-02-12 11:05:12.944 [http-nio-8080-exec-1] INFO  c.mts.gateway.sdp.SDPConnectionPool - Created connection 3d0c63ec-c838-468a-9b60-494b96960b80 for service INFO_BRT (market 6)
+2026-02-12 11:05:12.945 [http-nio-8080-exec-1] INFO  c.mts.gateway.sdp.SDPConnectionPool - Creating connections for service TXN_INFO_PRIV to 10.232.92.86    :22031
+2026-02-12 11:05:12.945 [http-nio-8080-exec-1] DEBUG com.mts.gateway.sdp.SDPConnection - WebSocket handler set for connection 659f23c7-1046-4e73-bc4f-087efa1004cc
+2026-02-12 11:05:12.945 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - ========================================
+2026-02-12 11:05:12.945 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Connecting to Access Point: 10.232.92.86:22031
+2026-02-12 11:05:12.945 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Service: TXN_INFO_PRIV
+2026-02-12 11:05:12.945 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Username: TRADER@35240
+2026-02-12 11:05:12.945 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Connection ID: 659f23c7-1046-4e73-bc4f-087efa1004cc
+2026-02-12 11:05:12.945 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - ========================================
+2026-02-12 11:05:12.945 [http-nio-8080-exec-1] DEBUG com.mts.gateway.sdp.SDPConnection - Creating TCP context...
+2026-02-12 11:05:12.945 [http-nio-8080-exec-1] DEBUG com.mts.gateway.sdp.SDPConnection - Creating channels for Access Point...
+2026-02-12 11:05:12.945 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Creating transaction channel for TXN_INFO_PRIV service...
+2026-02-12 11:05:12.945 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - About to connect transaction channel:
+2026-02-12 11:05:12.945 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection -   host = '10.232.92.86' (length=12, null=false)
+2026-02-12 11:05:12.945 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection -   port = 22031
+2026-02-12 11:05:12.946 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Transaction channel connect() method completed
+2026-02-12 11:05:12.946 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - ✓ Connected successfully to 10.232.92.86:22031
+2026-02-12 11:05:12.946 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Waiting for onConnected() callback...
+2026-02-12 11:05:12.946 [http-nio-8080-exec-1] INFO  c.mts.gateway.sdp.SDPConnectionPool - Created connection 659f23c7-1046-4e73-bc4f-087efa1004cc for service TXN_INFO_PRIV (market 6)
+2026-02-12 11:05:12.946 [http-nio-8080-exec-1] INFO  c.mts.gateway.sdp.SDPConnectionPool - Market connections initialized successfully for platform ID: 6
+2026-02-12 11:05:12.946 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Disconnecting from 10.232.92.86:12001
+2026-02-12 11:05:12.947 [Thread-3] DEBUG com.mts.gateway.sdp.SDPConnection - Transaction channel connected
+2026-02-12 11:05:12.947 [Thread-3] INFO  com.mts.gateway.sdp.SDPConnection - Transaction channel sending logon with service: QUERY (QUERY)
+2026-02-12 11:05:12.947 [http-nio-8080-exec-1] INFO  com.mts.gateway.sdp.SDPConnection - Disconnected from 10.232.92.86:12001
+2026-02-12 11:05:12.948 [http-nio-8080-exec-1] INFO  com.mts.gateway.service.AuthService - Login successful. Market connections established for platform 6
+2026-02-12 11:05:12.949 [http-nio-8080-exec-1] INFO  c.m.g.controller.AuthController - Login successful for user: TRADER@35240
+2026-02-12 11:05:12.950 [Thread-3] ERROR com.mts.gateway.sdp.SDPConnection - === Address service disconnected ===
+2026-02-12 11:05:12.951 [Thread-3] ERROR com.mts.gateway.sdp.SDPConnection - SDPResult code: TCP_CONNECTION_CLOSE
+2026-02-12 11:05:12.951 [Thread-3] ERROR com.mts.gateway.sdp.SDPConnection - SDPResult detail: null
+2026-02-12 11:05:12.951 [Thread-3] ERROR com.mts.gateway.sdp.SDPConnection - SDPResult toString: SDPResult: code(TCP_CONNECTION_CLOSE)
+2026-02-12 11:05:12.953 [Thread-3] DEBUG com.mts.gateway.sdp.SDPConnection - Broadcast channel connected
+2026-02-12 11:05:12.954 [Thread-3] DEBUG com.mts.gateway.sdp.SDPConnection - Transaction channel connected
+2026-02-12 11:05:12.954 [Thread-3] INFO  com.mts.gateway.sdp.SDPConnection - Transaction channel sending logon with service: TXN_INFO_PRIV (TXN_INFO_PRIV)
+2026-02-12 11:05:13.001 [InputBlockSwitcher Channel 1 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection - Transaction channel logged in: LoginOK
+2026-02-12 11:05:13.002 [InputBlockSwitcher Channel 1 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection - Transaction channel login successful
+2026-02-12 11:05:13.014 [InputBlockSwitcher Channel 2 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection - Transaction channel logged in: LoginOK
+2026-02-12 11:05:13.014 [InputBlockSwitcher Channel 2 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection - Transaction channel login successful
+2026-02-12 11:05:13.084 [InputBlockSwitcher Channel 1 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection - Broadcast channel logged in: LoginOK
+2026-02-12 11:05:13.084 [InputBlockSwitcher Channel 1 Worker Thread] INFO  com.mts.gateway.sdp.SDPConnection - Broadcast channel login successful
+2026-02-12 11:05:18.061 [http-nio-8080-exec-4] INFO  c.m.g.controller.ClassController - Returning 386 available classes (sorted A-Z)
+2026-02-12 11:05:26.616 [scheduling-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Running connection pool health check
+2026-02-12 11:05:56.616 [scheduling-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Running connection pool health check
+2026-02-12 11:06:26.616 [scheduling-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Running connection pool health check
+2026-02-12 11:06:56.616 [scheduling-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Running connection pool health check
+2026-02-12 11:07:26.616 [scheduling-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Running connection pool health check
+2026-02-12 11:07:56.616 [scheduling-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Running connection pool health check
+2026-02-12 11:08:26.616 [scheduling-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Running connection pool health check
+2026-02-12 11:08:56.616 [scheduling-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Running connection pool health check
+2026-02-12 11:09:26.616 [scheduling-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Running connection pool health check
+2026-02-12 11:09:56.616 [scheduling-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Running connection pool health check
+2026-02-12 11:10:26.616 [scheduling-1] DEBUG c.mts.gateway.sdp.SDPConnectionPool - Running connection pool health check
