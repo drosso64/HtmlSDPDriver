@@ -99,6 +99,7 @@
   border-collapse: collapse;
   font-size: 14px;
   margin: 0;
+  display: table;
 }
 
 .detail-table thead {
@@ -106,6 +107,15 @@
   position: sticky;
   top: 0;
   z-index: 10;
+  display: table-header-group;
+}
+
+.detail-table tbody {
+  display: table-row-group;
+}
+
+.detail-table tr {
+  display: table-row;
 }
 
 .detail-table th {
@@ -115,12 +125,14 @@
   color: #333;
   border-bottom: 2px solid #ddd;
   white-space: nowrap;
+  display: table-cell;
 }
 
 .detail-table td {
   padding: 10px 16px;
   border-bottom: 1px solid #eee;
   vertical-align: top;
+  display: table-cell;
 }
 
 .detail-table tbody tr:hover {

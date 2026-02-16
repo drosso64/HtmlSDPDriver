@@ -188,10 +188,15 @@ public class AuthService {
         SessionInfo session = activeSessions.remove(token);
         
         if (session != null) {
-            log.info("User {} logged out", session.getUsername());
+            log.info("User {} logged out, closing all SDP connections", session.getUsername());
             
-            // TODO: Close IPSP connections for this session
-            // connectionPool.closeSessionConnections(token);
+            // Close all SDP connections to Access Points
+            try {
+                connectionPool.shutdown();
+                log.info("SDP connections closed successfully");
+            } catch (Exception e) {
+                log.error("Error closing SDP connections during logout", e);
+            }
         }
     }
     

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import DataDetailModal from './DataDetailModal';
 import './RecordDetailModal.css';
 
 /**
@@ -56,6 +57,7 @@ import './RecordDetailModal.css';
 function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = false }) {
   const [editedData, setEditedData] = useState({});
   const [isEditing, setIsEditing] = useState(false);
+  const [structuredDataModal, setStructuredDataModal] = useState(null);
 
   useEffect(() => {
     if (record && isOpen) {
@@ -69,6 +71,8 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
             key !== 'className' &&            // Già mostrato in header
             key !== 'cLASS_ID' &&             // Metadata SDP
             key !== 'classid' &&              // Metadata SDP (lowercase)
+            key !== 'classId' &&              // Metadata SDP (camelCase)
+            key !== 'ClassId' &&              // Metadata SDP (PascalCase)
             key !== 'class' &&                // Duplicate
             key !== 'sMPClassId') {           // Metadata SDP
           initialData[key] = record[key];
@@ -137,13 +141,17 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
    */
   const renderFieldInput = (fieldName, value) => {
     // CASO 1: Tipi complessi (Array, Object)
-    // Attualmente read-only, TODO: implementare editor dedicato
+    // Mostra badge per aprire modal editabile
     if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+      const typeLabel = Array.isArray(value) ? `Array[${value.length}]` : (value._type || 'Object');
       return (
-        <div className="field-complex">
-          <span className="field-type">{Array.isArray(value) ? 'Array' : 'Object'}</span>
-          <span className="field-hint">(non modificabile)</span>
-        </div>
+        <button
+          className="field-structured-btn"
+          onClick={() => setStructuredDataModal({ data: value, title: fieldName, fieldName })}
+          type="button"
+        >
+          {typeLabel} 👁️ {isEditing ? '✏️' : ''}
+        </button>
       );
     }
 
@@ -193,6 +201,8 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
            key !== 'className' && 
            key !== 'cLASS_ID' && 
            key !== 'classid' &&
+           key !== 'classId' &&
+           key !== 'ClassId' &&
            key !== 'class' &&
            key !== 'sMPClassId'
   );
@@ -291,6 +301,16 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
           </button>
         </div>
       </div>
+
+      {/* Structured Data Modal (for arrays/objects) */}
+      {structuredDataModal && (
+        <DataDetailModal
+          isOpen={true}
+          onClose={() => setStructuredDataModal(null)}
+          data={structuredDataModal.data}
+          title={structuredDataModal.title}
+        />
+      )}
     </div>
   );
 }

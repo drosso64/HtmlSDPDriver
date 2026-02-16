@@ -10,9 +10,9 @@ const api = axios.create({
 // Request interceptor per aggiungere token/session
 api.interceptors.request.use(
   (config) => {
-    const session = sessionStorage.getItem('session');
-    if (session) {
-      config.headers['X-Session-Token'] = session;
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      config.headers['Authorization'] = token;
     }
     return config;
   },
@@ -26,8 +26,8 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      sessionStorage.removeItem('session');
-      sessionStorage.removeItem('user');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
       window.location.href = '/login';
     }
     return Promise.reject(error);

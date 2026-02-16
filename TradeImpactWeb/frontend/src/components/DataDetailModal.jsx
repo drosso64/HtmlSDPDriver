@@ -106,19 +106,59 @@ function DataDetailModal({ isOpen, onClose, data, title }) {
       return <div className="empty-array">Array vuoto</div>;
     }
 
-    // Get all unique keys from all objects
-    const allKeys = new Set();
+    console.log('🔍 Array to render:', arr);
+    console.log('🔍 Array length:', arr.length);
+    console.log('🔍 First 3 items:', arr.slice(0, 3));
+
+    // Get all unique keys from first object to preserve field order
+    // Then add any additional keys from other objects
+    const keys = [];
+    const seenKeys = new Set();
+    
+    // First pass: get keys from first object (preserves order)
+    if (arr[0] && typeof arr[0] === 'object') {
+      console.log('🔍 First array item:', arr[0]);
+      console.log('🔍 Keys in first item:', Object.keys(arr[0]));
+      
+      Object.keys(arr[0]).forEach(key => {
+        // Filter out internal/metadata fields
+        if (!key.startsWith('_') &&
+            key !== 'cLASS_ID' &&
+            key !== 'classid' &&
+            key !== 'classId' &&
+            key !== 'ClassId' &&
+            key !== 'className' &&
+            key !== 'class' &&
+            key !== 'sMPClassId') {
+          keys.push(key);
+          seenKeys.add(key);
+        }
+      });
+    }
+    
+    console.log('🔍 Final keys for columns:', keys);
+    
+    // Second pass: add any missing keys from other objects
     arr.forEach(obj => {
       if (typeof obj === 'object' && obj !== null) {
         Object.keys(obj).forEach(key => {
-          if (!key.startsWith('_')) {
-            allKeys.add(key);
+          if (!seenKeys.has(key) &&
+              !key.startsWith('_') &&
+              key !== 'cLASS_ID' &&
+              key !== 'classid' &&
+              key !== 'classId' &&
+              key !== 'ClassId' &&
+              key !== 'className' &&
+              key !== 'class' &&
+              key !== 'sMPClassId') {
+            keys.push(key);
+            seenKeys.add(key);
           }
         });
       }
     });
-
-    const keys = Array.from(allKeys);
+    
+    console.log('🔍 Final keys for columns:', keys);
 
     return (
       <div className="array-details">
@@ -126,24 +166,32 @@ function DataDetailModal({ isOpen, onClose, data, title }) {
           <thead>
             <tr>
               <th>Idx</th>
-              {keys.map(key => (
-                <th key={key}>{key}</th>
-              ))}
+              {keys.map(key => {
+                console.log('🔍 Header column:', key);
+                return <th key={key}>{key}</th>;
+              })}
             </tr>
           </thead>
           <tbody>
-            {arr.map((item, index) => (
-              <tr key={index}>
-                <td className="array-index">{index}</td>
-                {keys.map(key => (
-                  <td key={key} className="field-value">
-                    {item && typeof item === 'object' 
-                      ? renderValue(item[key], `${key}[${index}]`)
-                      : '-'}
-                  </td>
-                ))}
-              </tr>
-            ))}
+            {arr.map((item, index) => {
+              if (index === 0) console.log(`🔍 First row item:`, item);
+              return (
+                <tr key={index}>
+                  <td className="array-index">{index}</td>
+                  {keys.map(key => {
+                    const cellValue = item && typeof item === 'object' ? item[key] : '-';
+                    if (index === 0) console.log(`  🔍 Cell [0][${key}]:`, cellValue);
+                    return (
+                      <td key={key} className="field-value">
+                        {item && typeof item === 'object' 
+                          ? renderValue(item[key], `${key}[${index}]`)
+                          : '-'}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

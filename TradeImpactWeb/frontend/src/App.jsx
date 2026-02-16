@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { WebSocketProvider } from './contexts/WebSocketContext'
+import * as api from './services/api'
 import Login from './components/Login'
 import ClassSubscription from './components/ClassSubscription'
 import DataGrid from './components/DataGrid'
@@ -81,9 +82,15 @@ function App() {
   useEffect(() => {
     // Check if user is already logged in (from local storage - shared across windows)
     const savedUser = localStorage.getItem('user')
-    if (savedUser) {
+    const savedToken = localStorage.getItem('authToken')
+    
+    if (savedUser && savedToken) {
       setUser(JSON.parse(savedUser))
       setIsAuthenticated(true)
+    } else {
+      // Clear incomplete sessions
+      localStorage.removeItem('user')
+      localStorage.removeItem('authToken')
     }
   }, [])
 
@@ -91,12 +98,26 @@ function App() {
     setUser(userData)
     setIsAuthenticated(true)
     localStorage.setItem('user', JSON.stringify(userData))
+    // Save authentication token
+    if (userData.token) {
+      localStorage.setItem('authToken', userData.token)
+    }
   }
 
-  const handleLogout = () => {
-    setUser(null)
-    setIsAuthenticated(false)
-    localStorage.removeItem('user')
+  const handleLogout = async () => {
+    try {
+      // Call logout API to close SDP connections
+      await api.auth.logout()
+      console.log('Logout API chiamata con successo')
+    } catch (error) {
+      console.error('Errore durante il logout:', error)
+    } finally {
+      // Clear local state regardless of API call result
+      setUser(null)
+      setIsAuthenticated(false)
+      localStorage.removeItem('user')
+      localStorage.removeItem('authToken')
+    }
   }
 
   return (

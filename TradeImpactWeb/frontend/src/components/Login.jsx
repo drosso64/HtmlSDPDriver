@@ -34,13 +34,14 @@ function Login({ onLogin }) {
 
       if (response.data.success) {
         // Salva token
-        localStorage.setItem('token', response.data.token)
+        localStorage.setItem('authToken', response.data.token)
         
         onLogin({
           username: response.data.username,
           ipspHost: response.data.ipspHost,
           ipspPort: response.data.ipspPort,
           connected: response.data.connected,
+          token: response.data.token,
           loginTime: new Date().toISOString()
         })
       } else {

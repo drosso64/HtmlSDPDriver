@@ -126,6 +126,7 @@ function DynamicDataGrid({ data }) {
       if (!key.startsWith('_') &&       // Non _rowId, _type, etc.
           key !== 'cLASS_ID' &&          // Metadata SDP
           key !== 'classid' &&           // Metadata SDP (lowercase variant)
+          key !== 'classId' &&           // Metadata SDP (camelCase variant)
           key !== 'className' &&         // Already in tab name
           key !== 'class' &&             // Duplicate
           key !== 'sMPClassId' &&        // Metadata SDP

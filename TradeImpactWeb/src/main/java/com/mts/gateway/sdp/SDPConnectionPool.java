@@ -526,8 +526,12 @@ public class SDPConnectionPool {
         }
         activeConnections.clear();
         
-        connectionPools.clear();
-        initialized = false;
+        // Don't clear the pools themselves - just empty them
+        // This allows re-initialization after logout/login
+        // connectionPools.clear(); // REMOVED - keep empty pools for reuse
+        
+        // Keep initialized = true so pools remain available
+        // initialized = false; // REMOVED - pool structure remains valid
         
         log.info("SDP Connection Pool shutdown complete");
     }
