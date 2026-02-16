@@ -125,6 +125,14 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
     onClose();
   };
 
+  const handleStructuredDataSave = (newData) => {
+    // Update the field in editedData with the modified array/object
+    const fieldName = structuredDataModal.fieldName;
+    console.log('📥 Receiving structured data:', fieldName, newData);
+    handleFieldChange(fieldName, newData);
+    setStructuredDataModal(null);
+  };
+
   /**
    * Renderizza input appropriato per tipo di dato
    * 
@@ -250,7 +258,7 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
               <div key={fieldName} className="field-row">
                 <label className="field-label">{fieldName}</label>
                 <div className="field-value">
-                  {renderFieldInput(fieldName, record[fieldName])}
+                  {renderFieldInput(fieldName, editedData[fieldName] ?? record[fieldName])}
                 </div>
               </div>
             ))}
@@ -309,6 +317,8 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
           onClose={() => setStructuredDataModal(null)}
           data={structuredDataModal.data}
           title={structuredDataModal.title}
+          isEditing={isEditing}
+          onSave={handleStructuredDataSave}
         />
       )}
     </div>

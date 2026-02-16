@@ -1,11 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './DataDetailModal.css';
 
 /**
  * Modal for displaying complex data structures (objects, arrays)
+ * @param {boolean} isEditing - If true, allows editing the data
+ * @param {function} onSave - Callback when saving edited data
  */
-function DataDetailModal({ isOpen, onClose, data, title }) {
+function DataDetailModal({ isOpen, onClose, data, title, isEditing = false, onSave }) {
   const [nestedModal, setNestedModal] = useState(null);
+  const [editedData, setEditedData] = useState(data);
+
+  // Update editedData when data changes
+  useEffect(() => {
+    setEditedData(data);
+  }, [data]);
 
   if (!isOpen) return null;
 
@@ -101,6 +109,52 @@ function DataDetailModal({ isOpen, onClose, data, title }) {
     );
   };
 
+  const handleArrayItemChange = (index, key, value) => {
+    if (!isEditing) return;
+    
+    const newArray = [...editedData];
+    newArray[index] = { ...newArray[index], [key]: value };
+    setEditedData(newArray);
+  };
+
+  const handleAddRow = () => {
+    if (!isEditing || !Array.isArray(editedData) || editedData.length === 0) return;
+    
+    // Create a new row with same structure as first item, but with empty/default values
+    const firstItem = editedData[0];
+    const newRow = {};
+    
+    Object.keys(firstItem).forEach(key => {
+      const value = firstItem[key];
+      if (typeof value === 'boolean') {
+        newRow[key] = false;
+      } else if (typeof value === 'number') {
+        newRow[key] = 0;
+      } else if (typeof value === 'string') {
+        newRow[key] = '';
+      } else {
+        newRow[key] = null;
+      }
+    });
+    
+    setEditedData([...editedData, newRow]);
+  };
+
+  const handleDeleteRow = (index) => {
+    if (!isEditing) return;
+    
+    const newArray = editedData.filter((_, i) => i !== index);
+    setEditedData(newArray);
+  };
+
+  const handleSave = () => {
+    console.log('💾 Saving edited data:', editedData);
+    if (onSave) {
+      onSave(editedData);
+    }
+    onClose();
+  };
+
   const renderArrayOfObjects = (arr) => {
     if (arr.length === 0) {
       return <div className="empty-array">Array vuoto</div>;
@@ -170,17 +224,61 @@ function DataDetailModal({ isOpen, onClose, data, title }) {
                 console.log('🔍 Header column:', key);
                 return <th key={key}>{key}</th>;
               })}
+              {isEditing && <th className="action-column">Azioni</th>}
             </tr>
           </thead>
           <tbody>
             {arr.map((item, index) => {
               if (index === 0) console.log(`🔍 First row item:`, item);
+              
               return (
                 <tr key={index}>
                   <td className="array-index">{index}</td>
                   {keys.map(key => {
                     const cellValue = item && typeof item === 'object' ? item[key] : '-';
                     if (index === 0) console.log(`  🔍 Cell [0][${key}]:`, cellValue);
+                    
+                    // Render editable input if in edit mode
+                    if (isEditing && item && typeof item === 'object') {
+                      const value = item[key];
+                      
+                      // Handle different types
+                      if (typeof value === 'boolean') {
+                        return (
+                          <td key={key} className="field-value">
+                            <input
+                              type="checkbox"
+                              checked={!!value}
+                              onChange={(e) => handleArrayItemChange(index, key, e.target.checked)}
+                            />
+                          </td>
+                        );
+                      } else if (typeof value === 'number') {
+                        return (
+                          <td key={key} className="field-value">
+                            <input
+                              type="number"
+                              value={value ?? 0}
+                              onChange={(e) => handleArrayItemChange(index, key, parseFloat(e.target.value) || 0)}
+                              className="cell-input"
+                            />
+                          </td>
+                        );
+                      } else if (typeof value === 'string') {
+                        return (
+                          <td key={key} className="field-value">
+                            <input
+                              type="text"
+                              value={value ?? ''}
+                              onChange={(e) => handleArrayItemChange(index, key, e.target.value)}
+                              className="cell-input"
+                            />
+                          </td>
+                        );
+                      }
+                    }
+                    
+                    // Read-only mode
                     return (
                       <td key={key} className="field-value">
                         {item && typeof item === 'object' 
@@ -189,40 +287,60 @@ function DataDetailModal({ isOpen, onClose, data, title }) {
                       </td>
                     );
                   })}
+                  {isEditing && (
+                    <td className="action-column">
+                      <button
+                        className="btn-delete-row"
+                        onClick={() => handleDeleteRow(index)}
+                        title="Elimina questa riga"
+                      >
+                        🗑️
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}
           </tbody>
         </table>
+        {isEditing && (
+          <div className="array-actions">
+            <button className="btn-add-row" onClick={handleAddRow}>
+              ➕ Aggiungi Riga
+            </button>
+          </div>
+        )}
       </div>
     );
   };
 
   const renderContent = () => {
-    if (!data) {
+    const dataToRender = isEditing ? editedData : data;
+    
+    if (!dataToRender) {
       return <div className="no-data">Nessun dato disponibile</div>;
     }
 
     // Array
-    if (Array.isArray(data)) {
-      if (data.length === 0) {
+    if (Array.isArray(dataToRender)) {
+      if (dataToRender.length === 0) {
         return <div className="empty-array">Array vuoto</div>;
       }
 
       // Check if array of objects or scalars
-      const firstItem = data[0];
+      const firstItem = dataToRender[0];
       const isObjectArray = typeof firstItem === 'object' && firstItem !== null && !Array.isArray(firstItem);
 
-      return isObjectArray ? renderArrayOfObjects(data) : renderArrayOfScalars(data);
+      return isObjectArray ? renderArrayOfObjects(dataToRender) : renderArrayOfScalars(dataToRender);
     }
 
     // Object
-    if (typeof data === 'object') {
-      return renderObjectDetails(data);
+    if (typeof dataToRender === 'object') {
+      return renderObjectDetails(dataToRender);
     }
 
     // Primitive
-    return <div className="primitive-value">{String(data)}</div>;
+    return <div className="primitive-value">{String(dataToRender)}</div>;
   };
 
   return (
@@ -237,6 +355,11 @@ function DataDetailModal({ isOpen, onClose, data, title }) {
             {renderContent()}
           </div>
           <div className="modal-footer">
+            {isEditing && (
+              <button className="btn-save" onClick={handleSave}>
+                💾 Salva
+              </button>
+            )}
             <button className="btn-close" onClick={onClose}>Chiudi</button>
           </div>
         </div>
