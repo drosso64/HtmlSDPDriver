@@ -59,6 +59,7 @@ public class MarketDataRecord {
      * When record was received
      */
     @Column(nullable = false)
+    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime receivedAt;
     
     /**

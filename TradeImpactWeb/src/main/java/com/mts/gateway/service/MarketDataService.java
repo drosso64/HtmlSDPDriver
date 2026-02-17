@@ -38,9 +38,9 @@ public class MarketDataService {
             
             marketDataRepository.save(record);
             
-            log.trace("Saved market data for class {} (ID: {}): {} bytes", className, classId, jsonData.length());
+            log.info("✅ Saved market data for class {} (ID: {}): {} bytes", className, classId, jsonData.length());
         } catch (Exception e) {
-            log.error("Failed to save market data for class {}: {}", className, e.getMessage());
+            log.error("❌ Failed to save market data for class {}: {}", className, e.getMessage(), e);
         }
     }
 }

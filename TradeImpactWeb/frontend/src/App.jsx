@@ -7,7 +7,7 @@ import ClassSubscription from './components/ClassSubscription'
 import DataGrid from './components/DataGrid'
 import StandaloneClassView from './components/StandaloneClassView'
 import QueryInterface from './components/QueryInterface'
-import DatabaseCleanup from './components/DatabaseCleanup'
+import Database from './components/Database'
 import Header from './components/Header'
 
 function AppContent({ isAuthenticated, user, onLogin, onLogout }) {
@@ -67,10 +67,10 @@ function AppContent({ isAuthenticated, user, onLogin, onLogout }) {
           } 
         />
         <Route 
-          path="/cleanup" 
+          path="/database" 
           element={
             isAuthenticated ? 
-            <DatabaseCleanup /> : 
+            <Database /> : 
             <Navigate to="/login" />
           } 
         />

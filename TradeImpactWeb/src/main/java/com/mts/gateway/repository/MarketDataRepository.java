@@ -2,6 +2,7 @@ package com.mts.gateway.repository;
 
 import com.mts.gateway.entity.MarketDataRecord;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -72,4 +73,20 @@ public interface MarketDataRepository extends JpaRepository<MarketDataRecord, Lo
      * Find records by action type
      */
     List<MarketDataRecord> findByAction(String action);
+    
+    /**
+     * Find records by class name with pagination
+     */
+    Page<MarketDataRecord> findByClassName(String className, Pageable pageable);
+    
+    /**
+     * Find most recent record
+     */
+    @Query("SELECT m FROM MarketDataRecord m ORDER BY m.receivedAt DESC")
+    List<MarketDataRecord> findTopByOrderByReceivedAtDesc(Pageable pageable);
+    
+    default java.util.Optional<MarketDataRecord> findTopByOrderByReceivedAtDesc() {
+        List<MarketDataRecord> results = findTopByOrderByReceivedAtDesc(PageRequest.of(0, 1));
+        return results.isEmpty() ? java.util.Optional.empty() : java.util.Optional.of(results.get(0));
+    }
 }

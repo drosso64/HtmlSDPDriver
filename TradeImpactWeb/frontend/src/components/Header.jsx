@@ -23,7 +23,7 @@ function Header({ user, onLogout }) {
           <Link to="/query" className={isActive('/query') ? 'active' : ''}>
             Query
           </Link>
-          <Link to="/cleanup" className={isActive('/cleanup') ? 'active' : ''}>
+          <Link to="/database" className={isActive('/database') ? 'active' : ''}>
             Database
           </Link>
         </nav>
