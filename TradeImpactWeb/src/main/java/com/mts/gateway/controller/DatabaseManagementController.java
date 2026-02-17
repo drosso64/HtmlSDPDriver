@@ -13,6 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -133,6 +134,7 @@ public class DatabaseManagementController {
      * Delete all market data
      */
     @DeleteMapping("/marketdata/all")
+    @Transactional
     public ResponseEntity<DeleteResult> deleteAllMarketData() {
         log.warn("Deleting ALL market data records");
         long count = marketDataRepository.count();
@@ -145,6 +147,7 @@ public class DatabaseManagementController {
      * Delete by classId
      */
     @DeleteMapping("/marketdata/class/{classId}")
+    @Transactional
     public ResponseEntity<DeleteResult> deleteByClass(@PathVariable Long classId) {
         log.warn("Deleting market data for class: {}", classId);
         long count = marketDataRepository.countByClassId(classId);
