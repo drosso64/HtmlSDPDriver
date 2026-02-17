@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { WebSocketProvider } from './contexts/WebSocketContext'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { WebSocketProvider, useWebSocket } from './contexts/WebSocketContext'
 import * as api from './services/api'
 import Login from './components/Login'
 import ClassSubscription from './components/ClassSubscription'
@@ -12,13 +12,19 @@ import Header from './components/Header'
 
 function AppContent({ isAuthenticated, user, onLogin, onLogout }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const isStandaloneView = location.pathname.startsWith('/class-view');
 
   console.log('🔍 AppContent render - pathname:', location.pathname, 'isStandalone:', isStandaloneView);
 
+  const handleLogoutWithRedirect = async () => {
+    await onLogout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <>
-      {isAuthenticated && !isStandaloneView && <Header user={user} onLogout={onLogout} />}
+      {isAuthenticated && !isStandaloneView && <Header user={user} onLogout={handleLogoutWithRedirect} />}
       <Routes>
         <Route 
           path="/login" 
@@ -85,8 +91,21 @@ function App() {
     const savedToken = localStorage.getItem('authToken')
     
     if (savedUser && savedToken) {
-      setUser(JSON.parse(savedUser))
-      setIsAuthenticated(true)
+      // Validate token with backend before considering user authenticated
+      api.auth.validateSession()
+        .then((response) => {
+          // Token is valid
+          setUser(JSON.parse(savedUser))
+          setIsAuthenticated(true)
+        })
+        .catch((error) => {
+          // Token is invalid or expired
+          console.log('Token non valido, logout necessario')
+          localStorage.removeItem('user')
+          localStorage.removeItem('authToken')
+          setUser(null)
+          setIsAuthenticated(false)
+        })
     } else {
       // Clear incomplete sessions
       localStorage.removeItem('user')

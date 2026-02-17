@@ -183,20 +183,37 @@ public class AuthService {
     
     /**
      * Logout and close connections
+     * Called by explicit logout (button) or implicit logout (WebSocket close)
      */
     public void logout(String token) {
-        SessionInfo session = activeSessions.remove(token);
-        
-        if (session != null) {
-            log.info("User {} logged out, closing all SDP connections", session.getUsername());
-            
-            // Close all SDP connections to Access Points
-            try {
-                connectionPool.shutdown();
-                log.info("SDP connections closed successfully");
-            } catch (Exception e) {
-                log.error("Error closing SDP connections during logout", e);
+        // Remove the specific session (may be null if called from WebSocket close)
+        if (token != null) {
+            SessionInfo session = activeSessions.remove(token);
+            if (session != null) {
+                log.info("User {} logged out", session.getUsername());
             }
+        }
+        
+        // Always close all SDP connections and clear all sessions
+        // (SDP connections are shared, so logout affects everyone)
+        logoutAll();
+    }
+    
+    /**
+     * Internal method to close all connections and clear all sessions
+     */
+    private void logoutAll() {
+        if (!activeSessions.isEmpty()) {
+            log.info("Clearing {} active session(s)", activeSessions.size());
+            activeSessions.clear();
+        }
+        
+        // Close all SDP connections to Access Points
+        try {
+            connectionPool.shutdown();
+            log.info("SDP connections closed successfully");
+        } catch (Exception e) {
+            log.error("Error closing SDP connections during logout", e);
         }
     }
     

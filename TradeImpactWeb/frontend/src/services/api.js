@@ -40,7 +40,10 @@ export const auth = {
     api.post('/auth/login', { username, password }),
   
   logout: () => 
-    api.post('/auth/logout')
+    api.post('/auth/logout'),
+  
+  validateSession: () =>
+    api.get('/auth/session')
 };
 
 // Classes

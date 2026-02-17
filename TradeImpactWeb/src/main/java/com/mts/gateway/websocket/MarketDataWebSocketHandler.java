@@ -1,10 +1,12 @@
 package com.mts.gateway.websocket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mts.gateway.service.AuthService;
 import com.mts.gateway.service.MarketDataService;
+import com.mts.gateway.sdp.SDPConnectionPool;
 import com.mts.gateway.util.SMPMessageSerializer;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -23,18 +25,37 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class MarketDataWebSocketHandler extends TextWebSocketHandler {
     
     private final MarketDataService marketDataService;
+    private final SDPConnectionPool connectionPool;
+    private final AuthService authService;
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+    private final Map<String, String> sessionTokens = new ConcurrentHashMap<>(); // sessionId -> token
     private final ObjectMapper objectMapper = new ObjectMapper();
+    
+    // Constructor with @Lazy to break circular dependency
+    public MarketDataWebSocketHandler(
+            MarketDataService marketDataService,
+            @Lazy SDPConnectionPool connectionPool,
+            @Lazy AuthService authService) {
+        this.marketDataService = marketDataService;
+        this.connectionPool = connectionPool;
+        this.authService = authService;
+    }
     
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         sessions.put(session.getId(), session);
-        log.info("WebSocket connection established: sessionId={}, total={}", 
-            session.getId(), sessions.size());
+        
+        // Extract token from query parameters or headers
+        String token = extractToken(session);
+        if (token != null) {
+            sessionTokens.put(session.getId(), token);
+        }
+        
+        log.info("WebSocket connection established: sessionId={}, token={}, total={}", 
+            session.getId(), token != null ? "present" : "missing", sessions.size());
         
         // Send welcome message
         Map<String, Object> welcome = Map.of(
@@ -45,11 +66,41 @@ public class MarketDataWebSocketHandler extends TextWebSocketHandler {
         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(welcome)));
     }
     
+    private String extractToken(WebSocketSession session) {
+        // Try to get token from query parameters
+        String uri = session.getUri().toString();
+        if (uri.contains("token=")) {
+            int start = uri.indexOf("token=") + 6;
+            int end = uri.indexOf("&", start);
+            if (end == -1) end = uri.length();
+            return uri.substring(start, end);
+        }
+        
+        // Try to get from handshake headers
+        var headers = session.getHandshakeHeaders();
+        if (headers.containsKey("Authorization")) {
+            String auth = headers.getFirst("Authorization");
+            if (auth != null && auth.startsWith("Bearer ")) {
+                return auth.substring(7);
+            }
+        }
+        
+        return null;
+    }
+    
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         sessions.remove(session.getId());
-        log.info("WebSocket connection closed: sessionId={}, status={}, total={}", 
-            session.getId(), status, sessions.size());
+        String token = sessionTokens.remove(session.getId());
+        
+        log.info("WebSocket connection closed: sessionId={}, status={}, token={}, total={}", 
+            session.getId(), status, token != null ? "present" : "missing", sessions.size());
+        
+        // If this was the last WebSocket connection, perform logout with the token
+        if (sessions.isEmpty()) {
+            log.info("Last WebSocket client disconnected - performing logout");
+            authService.logout(token); // Pass the actual token (or null if not found)
+        }
     }
     
     @Override
