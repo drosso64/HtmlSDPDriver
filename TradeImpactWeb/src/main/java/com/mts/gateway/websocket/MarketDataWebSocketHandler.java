@@ -3,6 +3,7 @@ package com.mts.gateway.websocket;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mts.gateway.service.AuthService;
 import com.mts.gateway.service.MarketDataService;
+import com.mts.gateway.service.MarketDataUpsertService;
 import com.mts.gateway.sdp.SDPConnectionPool;
 import com.mts.gateway.util.SMPMessageSerializer;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class MarketDataWebSocketHandler extends TextWebSocketHandler {
     
-    private final MarketDataService marketDataService;
+    private final MarketDataService marketDataService; // Keep for backward compatibility
+    private final MarketDataUpsertService marketDataUpsertService; // NEW: For table-per-class UPSERT
     private final SDPConnectionPool connectionPool;
     private final AuthService authService;
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
@@ -37,9 +39,11 @@ public class MarketDataWebSocketHandler extends TextWebSocketHandler {
     // Constructor with @Lazy to break circular dependency
     public MarketDataWebSocketHandler(
             MarketDataService marketDataService,
+            MarketDataUpsertService marketDataUpsertService,
             @Lazy SDPConnectionPool connectionPool,
             @Lazy AuthService authService) {
         this.marketDataService = marketDataService;
+        this.marketDataUpsertService = marketDataUpsertService;
         this.connectionPool = connectionPool;
         this.authService = authService;
     }
@@ -124,17 +128,26 @@ public class MarketDataWebSocketHandler extends TextWebSocketHandler {
      * 
      * @param classId The class ID
      * @param className The class name
-     * @param data The market data (SMP message)
+     * @param data The market data (SMP message object)
      */
     public void broadcastMarketData(Long classId, String className, Object data) {
-        // Serialize SMP message to structured JSON (once for both DB and WebSocket)
+        // Serialize SMP message to structured JSON (for WebSocket broadcast)
         String dataJson = SMPMessageSerializer.toJson(data);
         
-        // Persist to database asynchronously
+        // Extract hashKey for UPSERT semantics in frontend
+        Long hashKey = null;
         try {
-            marketDataService.saveMarketData(classId, className, dataJson);
+            hashKey = (Long) data.getClass().getMethod("hashKey").invoke(data);
         } catch (Exception e) {
-            log.error("Failed to persist market data for class {}: {}", className, e.getMessage());
+            log.warn("Failed to extract hashKey for class {}: {}", className, e.getMessage());
+        }
+        
+        // NEW: UPSERT to dynamic table (table-per-class with hash_key)
+        try {
+            // Pass the SMP object directly for hashKey() extraction
+            marketDataUpsertService.upsertMarketData(classId, className, data, "DATA");
+        } catch (Exception e) {
+            log.error("Failed to upsert market data for class {}: {}", className, e.getMessage());
         }
         
         if (sessions.isEmpty()) {
@@ -149,6 +162,7 @@ public class MarketDataWebSocketHandler extends TextWebSocketHandler {
                 "classId", classId,
                 "className", className,
                 "data", dataJson, // Structured JSON string
+                "hashKey", hashKey != null ? hashKey : 0L, // For frontend UPSERT
                 "timestamp", System.currentTimeMillis()
             );
             

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './Database.css';
+import { useWebSocket } from '../contexts/WebSocketContext';
 
 function Database() {
+  const ws = useWebSocket();
   const [stats, setStats] = useState(null);
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState(null);
@@ -73,6 +75,10 @@ function Database() {
     try {
       const response = await api.delete('/database/marketdata/all');
       alert(`✅ Deleted ${response.data.deletedCount} records`);
+      
+      // Don't reset WebSocket state - let backend communicate what was deleted
+      // Backend will stop subscriptions and WebSocket will update accordingly
+      
       loadStats();
       loadClasses();
       setRecords([]);
@@ -87,7 +93,13 @@ function Database() {
     
     try {
       const response = await api.delete(`/database/marketdata/class/${classId}`);
-      alert(`✅ Deleted ${response.data.deletedCount} records`);
+      alert(`✅ ${response.data.message || `Deleted ${response.data.deletedCount} records`}`);
+      
+      // Remove this class from WebSocket state
+      if (ws?.removeClassData) {
+        ws.removeClassData(classId);
+      }
+      
       loadStats();
       loadClasses();
       if (selectedClass === classId) {
@@ -190,7 +202,15 @@ function Database() {
       {/* Records Viewer */}
       {selectedClass && (
         <div className="records-section">
-          <h3>📝 Records for Class {selectedClass}</h3>
+          <div className="records-header">
+            <h3>📝 Records for Class {selectedClass}</h3>
+            <button 
+              onClick={() => setSelectedClass(null)}
+              className="btn-close"
+            >
+              ✖ Close
+            </button>
+          </div>
           {loading ? (
             <p className="loading-message">Loading...</p>
           ) : records.length === 0 ? (

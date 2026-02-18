@@ -31,8 +31,9 @@ services:
       - LOGGING_LEVEL_COM_TRADEIMPACT=${LOG_LEVEL:-INFO}
     
     volumes:
-      # Persisti database H2
-      - ./data:/app/data
+      # Database H2 rimane nel container (NON persistito su host)
+      # Se vuoi persistere, decommenta:
+      # - ./data:/app/data
       
       # Opzionale: mount logs
       - ./logs:/app/logs

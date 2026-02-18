@@ -20,38 +20,52 @@ function DataGrid() {
 
   // Parsing dei dati per la griglia
   const parsedData = useMemo(() => {
-    console.log('🔄 DataGrid: Parsing', allMessages?.length || 0, 'messaggi');
+    console.log('🔄 DataGrid: Parsing allMessages (Map structure)');
     
-    if (!allMessages || allMessages.length === 0) {
+    if (!allMessages || Object.keys(allMessages).length === 0) {
       return [];
     }
     
-    return allMessages.map(message => {
-      let parsedDataObj = message.data;
-      
-      if (typeof message.data === 'string') {
-        try {
-          parsedDataObj = JSON.parse(message.data);
-        } catch (e) {
-          console.error('❌ Failed to parse data JSON:', e);
-          parsedDataObj = { raw: message.data };
+    // Convert Map structure to flat array
+    // allMessages = { classId: { hashKey: record } }
+    const flatArray = [];
+    
+    Object.entries(allMessages).forEach(([classId, hashKeyMap]) => {
+      Object.values(hashKeyMap).forEach(message => {
+        let parsedDataObj = message.data;
+        
+        if (typeof message.data === 'string') {
+          try {
+            parsedDataObj = JSON.parse(message.data);
+          } catch (e) {
+            console.error('❌ Failed to parse data JSON:', e);
+            parsedDataObj = { raw: message.data };
+          }
         }
-      }
-      
-      return {
-        timestamp: message.timestamp,
-        classId: message.classId,
-        className: message.className,
-        data: parsedDataObj
-      };
+        
+        flatArray.push({
+          timestamp: message.timestamp,
+          classId: message.classId,
+          className: message.className,
+          hashKey: message.hashKey,
+          data: parsedDataObj
+        });
+      });
     });
+    
+    console.log('✅ DataGrid: Converted Map to', flatArray.length, 'records');
+    return flatArray;
   }, [allMessages]);
 
   // Update status quando arrivano dati
   useEffect(() => {
-    console.log('📊 DataGrid useEffect - allMessages.length:', allMessages?.length);
-    if (allMessages && allMessages.length > 0) {
-      setStatus(`Ricevuti ${allMessages.length} messaggi`);
+    const totalMessages = Object.keys(allMessages || {}).reduce((count, classId) => {
+      return count + Object.keys(allMessages[classId] || {}).length;
+    }, 0);
+    
+    console.log('📊 DataGrid useEffect - total unique records:', totalMessages);
+    if (totalMessages > 0) {
+      setStatus(`Ricevuti ${totalMessages} record unici (UPSERT)`);
     }
   }, [allMessages]);
 

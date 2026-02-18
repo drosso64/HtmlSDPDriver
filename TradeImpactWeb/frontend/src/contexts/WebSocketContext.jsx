@@ -11,21 +11,22 @@ import React, { createContext, useContext, useEffect, useRef, useState, useCallb
  * Backend (SpringBoot) → WebSocket → Questo Context → Componenti React
  * 
  * STATO GESTITO:
- * - allMessages: Array di TUTTI i messaggi ricevuti (⚠️ ATTENZIONE: cresce indefinitamente)
+ * - allMessages: Map strutturata { classId: { hashKey: record } } con UPSERT semantics
  * - marketData: Oggetto con ultimo messaggio per ogni classe (key = classId)
  * - isConnected: Stato connessione WebSocket
  * 
  * STRATEGIA DI NOTIFICA:
  * Quando arriva un messaggio WebSocket:
- * 1. Aggiunge a allMessages (storico completo)
+ * 1. UPSERT in allMessages usando hashKey (update se esiste, insert se nuovo)
  * 2. Aggiorna marketData (ultimo valore per classe)
  * 3. Notifica tutti i messageHandlers registrati (pattern Observer)
  * 
- * PROBLEMA NOTO:
- * allMessages cresce senza limiti → rischio esaurimento memoria
- * TODO: Limitare a ultimi N messaggi o caricare da DB con paginazione
+ * UPSERT SEMANTICS:
+ * Grazie alla struttura Map basata su hashKey, gli aggiornamenti dello stesso record
+ * sovrascrivono il valore precedente invece di accumulare duplicati.
+ * Questo previene memory bloat e riflette lo stesso comportamento del database.
  * 
- * @see ClassTabbedView.jsx - Consuma allMessages per creare tab dinamici
+ * @see ClassTabbedView.jsx - Consuma allMessages convertito in array
  * @see DynamicDataGrid.jsx - Renderizza dati in tabelle
  */
 const WebSocketContext = createContext(null);
@@ -34,10 +35,10 @@ export const WebSocketProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [marketData, setMarketData] = useState({});
   
-  // ⚠️ ATTENZIONE: Questo array accumula TUTTI i messaggi ricevuti
-  // Non viene mai svuotato → può causare memory leak in sessioni lunghe
-  // SOLUZIONE FUTURA: Implementare ring buffer o paginazione da DB
-  const [allMessages, setAllMessages] = useState([]);
+  // NEW: UPSERT semantics using Map structure
+  // allMessages: { classId: { hashKey: record } }
+  // This prevents memory bloat by updating existing records instead of appending
+  const [allMessages, setAllMessages] = useState({});
   
   const [error, setError] = useState(null);
   const ws = useRef(null);
@@ -69,9 +70,13 @@ export const WebSocketProvider = ({ children }) => {
       ws.current = new WebSocket(wsUrl);
 
       ws.current.onopen = () => {
-        console.log('✅ WebSocket connesso (globale)');
+        console.log('✅ WebSocket connesso (globale) - resettando stato');
         setIsConnected(true);
         setError(null);
+        
+        // Reset data on reconnection (backend may have restarted and cleaned database)
+        setAllMessages({});
+        setMarketData({});
       };
 
       ws.current.onmessage = (event) => {
@@ -91,21 +96,41 @@ export const WebSocketProvider = ({ children }) => {
                 classId: message.classId,
                 className: message.className,
                 data: message.data,
+                hashKey: message.hashKey,
                 timestamp: message.timestamp
               }
             }));
 
-            // 2️⃣ allMessages: accumula TUTTO lo storico
-            //    Usato per: visualizzazione serie temporali, analisi storico
-            //    ⚠️ PROBLEMA: array cresce indefinitamente
-            setAllMessages(prev => [...prev, {
-              timestamp: message.timestamp,
-              classId: message.classId,
-              className: message.className,
-              data: message.data
-            }]);
+            // 2️⃣ allMessages: UPSERT semantics using hashKey
+            //    Structure: { classId: { hashKey: record } }
+            //    If hashKey exists: UPDATE, else: INSERT
+            //    This prevents memory bloat from duplicate updates
+            setAllMessages(prev => {
+              const classId = message.classId;
+              const hashKey = message.hashKey;
+              
+              // Get or create class bucket
+              const classBucket = prev[classId] || {};
+              
+              // UPSERT: Update existing or insert new
+              const updatedBucket = {
+                ...classBucket,
+                [hashKey]: {
+                  timestamp: message.timestamp,
+                  classId: message.classId,
+                  className: message.className,
+                  hashKey: message.hashKey,
+                  data: message.data
+                }
+              };
+              
+              return {
+                ...prev,
+                [classId]: updatedBucket
+              };
+            });
 
-            console.log('💾 Messaggio salvato nello storico globale');
+            console.log('💾 Messaggio UPSERT (hashKey:', message.hashKey, ')');
 
             // 3️⃣ Notifica tutti i component che hanno registrato un handler
             //    Pattern OBSERVER: broadcast a tutti gli interessati
@@ -131,8 +156,12 @@ export const WebSocketProvider = ({ children }) => {
       };
 
       ws.current.onclose = () => {
-        console.log('🔌 WebSocket disconnesso (globale)');
+        console.log('🔌 WebSocket disconnesso (globale) - resettando dati');
         setIsConnected(false);
+        
+        // Reset data on disconnect (backend may have stopped or user logged out)
+        setAllMessages({});
+        setMarketData({});
         
         // Tentativo di riconnessione dopo 3 secondi
         reconnectTimeout.current = setTimeout(() => {
@@ -167,8 +196,18 @@ export const WebSocketProvider = ({ children }) => {
       return newData;
     });
     
-    // Remove from allMessages
-    setAllMessages(prev => prev.filter(msg => msg.classId !== classId));
+    // Remove from allMessages (now a Map structure)
+    setAllMessages(prev => {
+      const newMessages = { ...prev };
+      delete newMessages[classId];
+      return newMessages;
+    });
+  }, []);
+
+  const resetAllData = useCallback(() => {
+    console.log('🔄 Resetting all WebSocket data (Delete All triggered)');
+    setAllMessages({});
+    setMarketData({});
   }, []);
 
   const addMessageHandler = useCallback((handler) => {
@@ -202,6 +241,7 @@ export const WebSocketProvider = ({ children }) => {
     connect,
     disconnect,
     removeClassData,
+    resetAllData,
     addMessageHandler
   };
 
@@ -220,6 +260,12 @@ export const useWebSocket = () => {
   if (!context) {
     throw new Error('useWebSocket deve essere usato dentro WebSocketProvider');
   }
-  console.log('🔌 useWebSocket hook chiamato - allMessages:', context.allMessages?.length || 0);
+  
+  // Count unique records across all classes
+  const totalRecords = Object.keys(context.allMessages || {}).reduce((count, classId) => {
+    return count + Object.keys(context.allMessages[classId] || {}).length;
+  }, 0);
+  
+  console.log('🔌 useWebSocket hook chiamato - unique records:', totalRecords);
   return context;
 };

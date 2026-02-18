@@ -728,29 +728,46 @@ public class SDPConnection implements Closeable {
         
         @Override
         public void onSubscribeData(SAPSubscribeData data) {
-            log.info("Received subscription data for class {}", data.getClassId());
-            touchActivity();
-            
-            // Broadcast to WebSocket clients if handler is set
-            if (webSocketHandler != null) {
+            try {
+                Long classId = data.getClassId() != null ? data.getClassId().getValue() : 0L;
+                log.info("Received subscription data for class {}", classId);
+                touchActivity();
+                
+                // Try to get SMP message - may fail if XDR decoding has issues
+                Object smpMessage = null;
+                String className = "Unknown";
+                
                 try {
-                    // Use reflection to call broadcastMarketData method
-                    java.lang.reflect.Method method = webSocketHandler.getClass()
-                        .getMethod("broadcastMarketData", Long.class, String.class, Object.class);
-                    
-                    // Convert ULong to Long
-                    Long classId = data.getClassId() != null ? data.getClassId().getValue() : 0L;
-                    String className = data.getSmpMessage() != null ? 
-                        data.getSmpMessage().getClass().getSimpleName() : "Unknown";
-                    
-                    log.info("Broadcasting market data: class={} (ID={})", className, classId);
-                    method.invoke(webSocketHandler, classId, className, data.getSmpMessage());
-                    log.info("Market data broadcast successful");
-                } catch (Exception e) {
-                    log.error("Failed to broadcast market data via WebSocket", e);
+                    smpMessage = data.getSmpMessage();
+                    if (smpMessage != null) {
+                        className = smpMessage.getClass().getSimpleName();
+                    }
+                } catch (Exception xdrError) {
+                    // XDR decoding failed - log and skip this message
+                    log.error("⚠️ XDR decoding failed for class {} - skipping malformed message: {}", 
+                        classId, xdrError.getMessage());
+                    log.debug("XDR decoding error details", xdrError);
+                    return; // Skip this message, continue subscription
                 }
-            } else {
-                log.warn("WebSocket handler not set, cannot broadcast market data");
+                
+                // Broadcast to WebSocket clients if handler is set
+                if (webSocketHandler != null && smpMessage != null) {
+                    try {
+                        // Use reflection to call broadcastMarketData method
+                        java.lang.reflect.Method method = webSocketHandler.getClass()
+                            .getMethod("broadcastMarketData", Long.class, String.class, Object.class);
+                        
+                        log.info("Broadcasting market data: class={} (ID={})", className, classId);
+                        method.invoke(webSocketHandler, classId, className, smpMessage);
+                        log.info("Market data broadcast successful");
+                    } catch (Exception e) {
+                        log.error("Failed to broadcast market data via WebSocket", e);
+                    }
+                } else if (webSocketHandler == null) {
+                    log.warn("WebSocket handler not set, cannot broadcast market data");
+                }
+            } catch (Exception e) {
+                log.error("⚠️ Unexpected error processing subscription data", e);
             }
         }
         
@@ -910,29 +927,46 @@ public class SDPConnection implements Closeable {
         
         @Override
         public void onSubscribeData(SAPSubscribeData data) {
-            log.info("Received subscription data for class {}", data.getClassId());
-            touchActivity();
-            
-            // Broadcast to WebSocket clients if handler is set
-            if (webSocketHandler != null) {
+            try {
+                Long classId = data.getClassId() != null ? data.getClassId().getValue() : 0L;
+                log.info("Received subscription data for class {}", classId);
+                touchActivity();
+                
+                // Try to get SMP message - may fail if XDR decoding has issues
+                Object smpMessage = null;
+                String className = "Unknown";
+                
                 try {
-                    // Use reflection to call broadcastMarketData method
-                    java.lang.reflect.Method method = webSocketHandler.getClass()
-                        .getMethod("broadcastMarketData", Long.class, String.class, Object.class);
-                    
-                    // Convert ULong to Long
-                    Long classId = data.getClassId() != null ? data.getClassId().getValue() : 0L;
-                    String className = data.getSmpMessage() != null ? 
-                        data.getSmpMessage().getClass().getSimpleName() : "Unknown";
-                    
-                    log.info("Broadcasting market data: class={} (ID={})", className, classId);
-                    method.invoke(webSocketHandler, classId, className, data.getSmpMessage());
-                    log.info("Market data broadcast successful");
-                } catch (Exception e) {
-                    log.error("Failed to broadcast market data via WebSocket", e);
+                    smpMessage = data.getSmpMessage();
+                    if (smpMessage != null) {
+                        className = smpMessage.getClass().getSimpleName();
+                    }
+                } catch (Exception xdrError) {
+                    // XDR decoding failed - log and skip this message
+                    log.error("⚠️ XDR decoding failed for class {} - skipping malformed message: {}", 
+                        classId, xdrError.getMessage());
+                    log.debug("XDR decoding error details", xdrError);
+                    return; // Skip this message, continue subscription
                 }
-            } else {
-                log.warn("WebSocket handler not set, cannot broadcast market data");
+                
+                // Broadcast to WebSocket clients if handler is set
+                if (webSocketHandler != null && smpMessage != null) {
+                    try {
+                        // Use reflection to call broadcastMarketData method
+                        java.lang.reflect.Method method = webSocketHandler.getClass()
+                            .getMethod("broadcastMarketData", Long.class, String.class, Object.class);
+                        
+                        log.info("Broadcasting market data: class={} (ID={})", className, classId);
+                        method.invoke(webSocketHandler, classId, className, smpMessage);
+                        log.info("Market data broadcast successful");
+                    } catch (Exception e) {
+                        log.error("Failed to broadcast market data via WebSocket", e);
+                    }
+                } else if (webSocketHandler == null) {
+                    log.warn("WebSocket handler not set, cannot broadcast market data");
+                }
+            } catch (Exception e) {
+                log.error("⚠️ Unexpected error processing subscription data", e);
             }
         }
         

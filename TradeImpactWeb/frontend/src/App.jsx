@@ -136,6 +136,9 @@ function App() {
       setIsAuthenticated(false)
       localStorage.removeItem('user')
       localStorage.removeItem('authToken')
+      
+      // No need to reload - React routing will handle navigation to /login
+      // WebSocket will disconnect automatically when user state changes
     }
   }
 

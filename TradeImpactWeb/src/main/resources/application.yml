@@ -9,6 +9,7 @@ spring:
   
   # H2 Database Configuration
   datasource:
+    # File-based dentro il container (non mappato su volume = non persiste tra restart)
     url: jdbc:h2:file:./data/marketdata;AUTO_SERVER=TRUE;MODE=MySQL
     driver-class-name: org.h2.Driver
     username: sa

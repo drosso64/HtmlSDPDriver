@@ -82,6 +82,31 @@ public class ActiveSubscriptionService {
     }
     
     /**
+     * Get all active subscriptions across all users
+     * Returns list of [username, subscriptionInfo] pairs
+     */
+    public List<UserSubscriptionPair> getAllActiveSubscriptions() {
+        List<UserSubscriptionPair> allSubscriptions = new ArrayList<>();
+        userSubscriptions.forEach((username, classMap) -> {
+            classMap.values().forEach(subInfo -> {
+                allSubscriptions.add(new UserSubscriptionPair(username, subInfo));
+            });
+        });
+        log.info("Found {} active subscriptions across {} users", allSubscriptions.size(), userSubscriptions.size());
+        return allSubscriptions;
+    }
+    
+    /**
+     * Pair of username and subscription info
+     */
+    @lombok.Data
+    @lombok.AllArgsConstructor
+    public static class UserSubscriptionPair {
+        private String username;
+        private SubscriptionInfo subscriptionInfo;
+    }
+    
+    /**
      * Subscription info holder
      */
     @lombok.Data
