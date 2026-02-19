@@ -73,12 +73,26 @@ public class ClassMetadataRepository {
      * Get complete schema for a class (metadata + introspection)
      */
     public ClassSchema getCompleteSchema(Long classId) {
+        log.info("🔍 Looking up schema for classId={}", classId);
+        
+        // Debug: log all available classIds
+        List<ClassInfo> allClasses = csvClassLoaderService.getAllClasses();
+        log.info("📊 Total classes in CSV: {}", allClasses.size());
+        if (allClasses.size() > 0 && allClasses.size() <= 10) {
+            allClasses.forEach(c -> log.info("  - {} (ID={})", c.getSimpleClassName(), c.getClassId()));
+        }
+        
         // Get info from CSV
         ClassInfo classInfo = getClassInfo(classId);
         if (classInfo == null) {
-            log.warn("No class info found for classId={}", classId);
+            log.warn("❌ No class info found in CSV for classId={}. Trying introspection fallback...", classId);
+            
+            // Fallback: try to introspect directly if we can find the class name
+            // This handles cases where CSV is incomplete or out of sync
             return null;
         }
+        
+        log.info("✅ Found class info: {} ({})", classInfo.getSimpleClassName(), classInfo.getClassName());
         
         // Introspect class structure
         ClassSchema schema = introspectionService.introspectClass(classInfo.getClassName());

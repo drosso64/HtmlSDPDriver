@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -152,37 +153,178 @@ public class ClassIntrospectionService {
     }
     
     /**
-     * Introspect all non-static, non-final fields
+     * Introspect all fields.
+     * 
+     * IMPORTANTE: Applica gli STESSI filtri e la STESSA normalizzazione
+     * di SMPMessageSerializer.toJson() per garantire consistenza.
+     * Se un campo compare nel JSON WebSocket, deve comparire nello schema.
+     * Se un campo è filtrato dal JSON WebSocket, non deve essere nello schema.
      */
     private List<FieldSchema> introspectFields(Class<?> clazz) {
         List<FieldSchema> fieldSchemas = new ArrayList<>();
+        Set<String> addedNames = new HashSet<>();
         
-        // Get all declared fields (including private)
-        Field[] fields = clazz.getDeclaredFields();
-        
-        for (Field field : fields) {
-            // Skip static and final fields
+        // STEP 1: Declared fields - STESSA logica di SMPMessageSerializer.toJson()
+        for (Field field : clazz.getDeclaredFields()) {
+            // Skip esattamente come SMPMessageSerializer
+            if (field.isSynthetic() || 
+                field.getName().startsWith("this$") ||
+                field.getName().equals("Class") ||
+                field.getName().equals("ClassName") ||
+                field.getName().equals("cLASS_ID") ||
+                field.getName().equals("classid") ||
+                field.getName().equals("SMPClassId") ||
+                field.getName().equals("CLASS_ID") ||
+                field.getName().equals("serialVersionUID")) {
+                continue;
+            }
+            
             int modifiers = field.getModifiers();
-            if (Modifier.isStatic(modifiers) || Modifier.isFinal(modifiers)) {
+            if (Modifier.isStatic(modifiers)) {
                 continue;
             }
             
-            // Skip CLASS_ID and other constants
-            if (field.getName().equals("CLASS_ID") || field.getName().equals("serialVersionUID")) {
+            // Normalizza a camelCase come SMPMessageSerializer
+            String normalizedName = normalizeFieldName(field.getName());
+            if (!addedNames.contains(normalizedName)) {
+                addedNames.add(normalizedName);
+                fieldSchemas.add(introspectField(field, normalizedName));
+            }
+        }
+        
+        // STEP 2: Getter methods - STESSA logica di SMPMessageSerializer.toJson()
+        // I getters catturano campi ereditati dalla superclasse che getDeclaredFields() non vede.
+        // getMethods() ritorna TUTTI i metodi pubblici, inclusi quelli ereditati.
+        for (Method method : clazz.getMethods()) {
+            if (!isGetter(method)) continue;
+            
+            String fieldName = getFieldNameFromGetter(method.getName());
+            
+            // Skip campi già aggiunti da getDeclaredFields()
+            if (addedNames.contains(fieldName)) continue;
+            
+            // Skip campi interni (stessi filtri di SMPMessageSerializer)
+            if (fieldName.equals("class") || 
+                fieldName.equals("className") || 
+                fieldName.equals("cLASS_ID") ||
+                fieldName.equals("classid") ||
+                fieldName.equals("sMPClassId")) {
                 continue;
             }
             
-            FieldSchema fieldSchema = introspectField(field);
-            fieldSchemas.add(fieldSchema);
+            addedNames.add(fieldName);
+            fieldSchemas.add(introspectFieldFromGetter(method, fieldName));
         }
         
         return fieldSchemas;
     }
     
     /**
-     * Introspect a single field
+     * Verifica se un metodo è un getter (get* o is*).
+     * STESSA logica di SMPMessageSerializer.isGetter().
      */
-    private FieldSchema introspectField(Field field) {
+    private boolean isGetter(Method method) {
+        if (!method.getName().startsWith("get") && !method.getName().startsWith("is")) {
+            return false;
+        }
+        if (method.getParameterCount() != 0) {
+            return false;
+        }
+        if (void.class.equals(method.getReturnType())) {
+            return false;
+        }
+        return true;
+    }
+    
+    /**
+     * Estrae il nome del campo dal nome del getter.
+     * STESSA logica di SMPMessageSerializer.getFieldNameFromGetter().
+     */
+    private String getFieldNameFromGetter(String methodName) {
+        String name = methodName.startsWith("is") 
+            ? methodName.substring(2) 
+            : methodName.substring(3);
+        return Character.toLowerCase(name.charAt(0)) + name.substring(1);
+    }
+    
+    /**
+     * Introspect a single field from a getter method (per campi ereditati).
+     * Usa il return type del getter come tipo del campo.
+     */
+    private FieldSchema introspectFieldFromGetter(Method method, String normalizedName) {
+        Class<?> fieldType = method.getReturnType();
+        String javaTypeName = fieldType.getSimpleName();
+        
+        // Handle arrays
+        boolean isArray = fieldType.isArray();
+        Integer arraySize = null;
+        if (isArray) {
+            fieldType = fieldType.getComponentType();
+            javaTypeName = fieldType.getSimpleName() + "[]";
+        }
+        
+        // Handle nested structures
+        // Enum NON è nested: viene serializzato come stringa da SMPMessageSerializer
+        boolean isNested = !fieldType.isPrimitive() && 
+                          !fieldType.isEnum() &&
+                          !fieldType.getName().startsWith("java.lang") &&
+                          !fieldType.getName().equals("java.util.Date");
+        
+        ClassSchema nestedSchema = null;
+        if (isNested && !isArray) {
+            try {
+                nestedSchema = introspectClass(fieldType.getName());
+            } catch (Exception e) {
+                log.warn("Failed to introspect nested class from getter: {}", fieldType.getName());
+            }
+        }
+        
+        // Handle enums
+        boolean isEnum = fieldType.isEnum();
+        List<String> enumValues = null;
+        if (isEnum) {
+            enumValues = Arrays.stream(fieldType.getEnumConstants())
+                .map(Object::toString)
+                .toList();
+        }
+        
+        return FieldSchema.builder()
+            .name(normalizedName)
+            .javaType(javaTypeName)
+            .sqlType(isEnum ? "VARCHAR(255)" : getSqlType(fieldType.getSimpleName()))
+            .jsonType(isEnum ? "string" : getJsonType(fieldType.getSimpleName()))
+            .required(fieldType.isPrimitive())
+            .nullable(!fieldType.isPrimitive())
+            .maxLength(javaTypeName.equals("String") ? 255 : null)
+            .array(isArray)
+            .arraySize(arraySize)
+            .nested(isNested)
+            .nestedSchema(nestedSchema)
+            .enumType(isEnum)
+            .enumValues(enumValues)
+            .description(normalizedName)
+            .metadata(new HashMap<>())
+            .build();
+    }
+    
+    /**
+     * Normalize field name to camelCase (lowercase first letter).
+     * STESSA logica di SMPMessageSerializer.normalizeFieldName().
+     */
+    private String normalizeFieldName(String fieldName) {
+        if (fieldName == null || fieldName.isEmpty()) {
+            return fieldName;
+        }
+        return Character.toLowerCase(fieldName.charAt(0)) + fieldName.substring(1);
+    }
+    
+    /**
+     * Introspect a single field.
+     * 
+     * @param field The Java reflection Field
+     * @param normalizedName The camelCase-normalized name (consistent with SMPMessageSerializer)
+     */
+    private FieldSchema introspectField(Field field, String normalizedName) {
         Class<?> fieldType = field.getType();
         String javaTypeName = fieldType.getSimpleName();
         
@@ -192,11 +334,12 @@ public class ClassIntrospectionService {
         if (isArray) {
             fieldType = fieldType.getComponentType();
             javaTypeName = fieldType.getSimpleName() + "[]";
-            // Array size would be extracted from annotations or XDR metadata
         }
         
         // Handle nested structures
+        // Enum NON è nested: viene serializzato come stringa da SMPMessageSerializer
         boolean isNested = !fieldType.isPrimitive() && 
+                          !fieldType.isEnum() &&
                           !fieldType.getName().startsWith("java.lang") &&
                           !fieldType.getName().equals("java.util.Date");
         
@@ -219,11 +362,11 @@ public class ClassIntrospectionService {
         }
         
         return FieldSchema.builder()
-            .name(field.getName())
+            .name(normalizedName)  // camelCase, consistente con SMPMessageSerializer
             .javaType(javaTypeName)
-            .sqlType(getSqlType(fieldType.getSimpleName()))
-            .jsonType(getJsonType(fieldType.getSimpleName()))
-            .required(fieldType.isPrimitive()) // Primitives are always required
+            .sqlType(isEnum ? "VARCHAR(255)" : getSqlType(fieldType.getSimpleName()))
+            .jsonType(isEnum ? "string" : getJsonType(fieldType.getSimpleName()))
+            .required(fieldType.isPrimitive())
             .nullable(!fieldType.isPrimitive())
             .maxLength(javaTypeName.equals("String") ? 255 : null)
             .array(isArray)
@@ -232,7 +375,7 @@ public class ClassIntrospectionService {
             .nestedSchema(nestedSchema)
             .enumType(isEnum)
             .enumValues(enumValues)
-            .description(field.getName())
+            .description(normalizedName)
             .metadata(new HashMap<>())
             .build();
     }

@@ -1,4 +1,4 @@
-import { useState, useMemo, Fragment } from 'react';
+import { useState, useMemo, Fragment, useEffect } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -10,6 +10,7 @@ import {
 import DataDetailModal from './DataDetailModal';
 import RecordDetailModal from './RecordDetailModal';
 import ExcelLikeFilter from './ExcelLikeFilter';
+import axios from 'axios';
 import './DynamicDataGrid.css';
 
 /**
@@ -48,11 +49,13 @@ import './DynamicDataGrid.css';
  * - getPaginationRowModel: paginazione
  * 
  * @param {Array} data - Array di messaggi da WebSocketContext
+ * @param {Number} classId - ID della classe (per caricare schema se tabella vuota)
+ * @param {String} className - Nome della classe (per template nuovo record)
  * @see WebSocketContext.jsx - Sorgente dati
  * @see ExcelLikeFilter.jsx - Componente filtro dropdown
  * @see RecordDetailModal.jsx - Modal per modifica record
  */
-function DynamicDataGrid({ data }) {
+function DynamicDataGrid({ data, classId, className }) {
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
   const [columnVisibility, setColumnVisibility] = useState({});
@@ -61,8 +64,29 @@ function DynamicDataGrid({ data }) {
   const [modalData, setModalData] = useState(null);
   const [recordDetailModal, setRecordDetailModal] = useState(null);
   const [showAddRecordModal, setShowAddRecordModal] = useState(false);
+  const [classSchema, setClassSchema] = useState(null);
 
-  console.log('🔷 DynamicDataGrid render - dati ricevuti:', data?.length || 0, 'records');
+  console.log('🔷 DynamicDataGrid render - dati ricevuti:', data?.length || 0, 'records', 'classId:', classId, 'className:', className);
+
+  // Load schema from API (needed for type information and creating new records)
+  // Lo schema è caricato SEMPRE, e viene ricaricato quando si cambia classe (tab).
+  useEffect(() => {
+    if (classId) {
+      console.log('📥 Loading schema for classId:', classId, className);
+      const token = localStorage.getItem('authToken');
+      axios.get(`/api/classes/${classId}/schema`, {
+        headers: { Authorization: token }
+      })
+      .then(response => {
+        console.log('✅ Schema loaded:', response.data?.fields?.length, 'fields');
+        setClassSchema(response.data);
+      })
+      .catch(error => {
+        console.error('❌ Failed to load schema:', error);
+        setClassSchema(null);
+      });
+    }
+  }, [classId]);  // Ricarica quando classId cambia (cambio tab)
 
   // STEP 1: Appiattimento Struttura Dati
   // Da: { timestamp, className, classId, data: { field1, field2, ... } }
@@ -214,25 +238,41 @@ function DynamicDataGrid({ data }) {
     }
   };
 
-  // Create empty record template for ADD operation
-  const createEmptyRecord = () => {
-    if (flattenedData.length === 0) return {};
-    
+  // Create empty record template for ADD operation (memoized)
+  const emptyRecordTemplate = useMemo(() => {
     const template = {
-      className: flattenedData[0].className,
-      classId: flattenedData[0].classId,
+      className: className || (flattenedData.length > 0 ? flattenedData[0].className : 'Unknown'),
+      classId: classId || (flattenedData.length > 0 ? flattenedData[0].classId : null),
       timestamp: Date.now(),
     };
     
-    // Add all fields with null values
-    columnNames.forEach(colName => {
-      if (colName !== 'timestamp') {
-        template[colName] = null;
-      }
-    });
+    // If we have data, use column names from data
+    if (flattenedData.length > 0) {
+      columnNames.forEach(colName => {
+        if (colName !== 'timestamp') {
+          template[colName] = null;
+        }
+      });
+    }
+    // If table is empty but we have schema, use fields from schema
+    else if (classSchema && classSchema.fields) {
+      console.log('📋 Creating template from schema with', classSchema.fields.length, 'fields');
+      classSchema.fields.forEach(field => {
+        const fieldName = field.name;
+        // Set default value based on jsonType from backend schema
+        if (field.jsonType === 'boolean') {
+          template[fieldName] = false;
+        } else if (field.jsonType === 'number') {
+          template[fieldName] = 0;
+        } else {
+          template[fieldName] = null;
+        }
+      });
+    }
     
+    console.log('📝 Empty record template created:', template);
     return template;
-  };
+  }, [flattenedData, columnNames, classSchema, classId, className]);
 
   // Define columns for TanStack Table
   const columns = useMemo(() => {
@@ -548,15 +588,17 @@ function DynamicDataGrid({ data }) {
         onClose={() => setRecordDetailModal(null)}
         record={recordDetailModal}
         onAction={handleRecordAction}
+        schema={classSchema}
       />
 
       {/* Add New Record Modal */}
       <RecordDetailModal
         isOpen={showAddRecordModal}
         onClose={() => setShowAddRecordModal(false)}
-        record={createEmptyRecord()}
+        record={emptyRecordTemplate || {}}
         onAction={handleRecordAction}
         isNewRecord={true}
+        schema={classSchema}
       />
     </div>
   );

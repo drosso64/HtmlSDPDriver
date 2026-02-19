@@ -1,6 +1,7 @@
 package com.mts.gateway.controller;
 
 import com.mts.gateway.dto.ClassInfo;
+import com.mts.gateway.dto.ClassSchema;
 import com.mts.gateway.repository.ClassMetadataRepository;
 import com.mts.gateway.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
@@ -65,6 +66,33 @@ public class ClassController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(classInfo);
+    }
+    
+    /**
+     * Get complete schema for a class
+     * 
+     * GET /api/classes/{classId}/schema
+     */
+    @GetMapping("/{classId}/schema")
+    public ResponseEntity<ClassSchema> getClassSchema(@PathVariable Long classId) {
+        log.info("GET /api/classes/{}/schema - Fetching class schema", classId);
+        
+        try {
+            ClassSchema schema = classMetadataRepository.getCompleteSchema(classId);
+            
+            if (schema == null) {
+                log.warn("Schema not found for classId={}", classId);
+                return ResponseEntity.notFound().build();
+            }
+            
+            log.info("Schema found for classId={}: {} fields", classId, 
+                schema.getFields() != null ? schema.getFields().size() : 0);
+            return ResponseEntity.ok(schema);
+            
+        } catch (Exception e) {
+            log.error("Failed to fetch class schema for classId={}", classId, e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
     
     /**

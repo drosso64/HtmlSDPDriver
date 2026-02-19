@@ -356,13 +356,52 @@ public class SDPClassLoaderService {
     }
 
     /**
-     * Load a class by name from market class loader
+     * Known SDP packages for resolving simple class names.
+     * All market classes reside in one of these packages.
+     */
+    private static final String[] KNOWN_PACKAGES = {
+        "com.mtsmarkets.sdp.smp.bvf",
+        "com.mtsmarkets.sdp.smp.cmf",
+        "com.mtsmarkets.sdp.smp.mts",
+        "com.mtsmarkets.sdp.smp.euromts"
+    };
+
+    /**
+     * Load a class by name from market class loader.
+     * 
+     * Supports both fully qualified names (com.mtsmarkets.sdp.smp.bvf.BV_BOND)
+     * and simple names (BV_BOND). If a simple name is provided, it tries all
+     * known SDP packages until a match is found.
+     * 
+     * @param className Simple or fully qualified class name
+     * @return The loaded Class
+     * @throws ClassNotFoundException if class not found in any known package
      */
     public Class<?> loadClass(String className) throws ClassNotFoundException {
         if (marketClassLoader == null) {
             throw new IllegalStateException("Market class loader not initialized");
         }
-        return Class.forName(className, true, marketClassLoader);
+        
+        // If already fully qualified (contains a dot), load directly
+        if (className.contains(".")) {
+            return Class.forName(className, true, marketClassLoader);
+        }
+        
+        // Simple name: try all known packages
+        for (String pkg : KNOWN_PACKAGES) {
+            String fqn = pkg + "." + className;
+            try {
+                Class<?> clazz = Class.forName(fqn, true, marketClassLoader);
+                log.debug("Resolved simple name '{}' → '{}'", className, fqn);
+                return clazz;
+            } catch (ClassNotFoundException e) {
+                // Try next package
+            }
+        }
+        
+        throw new ClassNotFoundException(
+            "Class '" + className + "' not found in any known package: " + 
+            String.join(", ", KNOWN_PACKAGES));
     }
 
     /**

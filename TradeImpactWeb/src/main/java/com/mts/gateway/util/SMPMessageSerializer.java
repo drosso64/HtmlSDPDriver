@@ -9,7 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -122,6 +124,70 @@ public class SMPMessageSerializer {
             log.error("Failed to serialize SMP message", e);
             return "{\"error\": \"Serialization failed: " + e.getMessage() + "\"}";
         }
+    }
+    
+    /**
+     * Estrae i nomi dei campi da un oggetto SMP usando la STESSA logica di toJson().
+     * 
+     * Questa è LA fonte di verità per i nomi dei campi.
+     * Usa la stessa reflection e normalizzazione camelCase di toJson(),
+     * ma restituisce solo i nomi (senza bisogno dei valori).
+     * 
+     * UNICA DIFFERENZA con toJson(): opera sulla Class<?> invece che sull'istanza,
+     * quindi non serve un oggetto vivo - basta la classe.
+     * 
+     * @param clazz La classe da cui estrarre i nomi dei campi
+     * @return Lista ordinata di nomi campi (camelCase, filtrati), consistente con toJson()
+     */
+    public static List<String> extractFieldNames(Class<?> clazz) {
+        List<String> fieldNames = new ArrayList<>();
+        
+        // STEP 1: Campi dichiarati - STESSA logica di toJson()
+        for (Field field : clazz.getDeclaredFields()) {
+            if (field.isSynthetic() || 
+                field.getName().startsWith("this$") ||
+                field.getName().equals("Class") ||
+                field.getName().equals("ClassName") ||
+                field.getName().equals("cLASS_ID") ||
+                field.getName().equals("classid") ||
+                field.getName().equals("SMPClassId") ||
+                java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+                continue;
+            }
+            
+            String fieldName = normalizeFieldName(field.getName());
+            if (!fieldNames.contains(fieldName)) {
+                fieldNames.add(fieldName);
+            }
+        }
+        
+        // STEP 2: Getter methods - STESSA logica di toJson()
+        for (Method method : clazz.getMethods()) {
+            if (isGetter(method)) {
+                String fieldName = getFieldNameFromGetter(method.getName());
+                if (!fieldNames.contains(fieldName)) {
+                    fieldNames.add(fieldName);
+                }
+            }
+        }
+        
+        return fieldNames;
+    }
+    
+    /**
+     * Determina il tipo JSON di un campo Java.
+     * Usato per costruire lo schema con i tipi corretti.
+     */
+    public static String getJsonType(Class<?> fieldType) {
+        if (fieldType.isPrimitive()) {
+            if (fieldType == boolean.class) return "boolean";
+            return "number";
+        }
+        if (fieldType == String.class) return "string";
+        if (Number.class.isAssignableFrom(fieldType)) return "number";
+        if (fieldType == Boolean.class) return "boolean";
+        if (fieldType.isArray()) return "array";
+        return "string";
     }
     
     /**

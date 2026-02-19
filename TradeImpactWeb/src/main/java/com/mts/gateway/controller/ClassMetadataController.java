@@ -3,6 +3,7 @@ package com.mts.gateway.controller;
 import com.mts.gateway.dto.ClassInfo;
 import com.mts.gateway.dto.ClassSchema;
 import com.mts.gateway.repository.ClassMetadataRepository;
+import com.mts.gateway.service.ClassIntrospectionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +26,7 @@ import java.util.Map;
 public class ClassMetadataController {
     
     private final ClassMetadataRepository metadataRepository;
+    private final ClassIntrospectionService introspectionService;
     
     /**
      * GET /api/classes
@@ -142,7 +144,14 @@ public class ClassMetadataController {
             ClassSchema schema = metadataRepository.getCompleteSchemaByName(className);
             
             if (schema == null) {
-                return ResponseEntity.notFound().build();
+                // Class not in CSV - try direct introspection
+                log.warn("Class {} not in CSV, attempting direct introspection", className);
+                schema = introspectionService.introspectClass(className);
+                
+                if (schema == null) {
+                    log.error("Failed to introspect class {}", className);
+                    return ResponseEntity.notFound().build();
+                }
             }
             
             return ResponseEntity.ok(schema);

@@ -87,6 +87,12 @@ function ClassTabbedView({ data, user }) {
     return tab ? tab.records : [];
   }, [activeTab, classTabs]);
 
+  // Get active tab object (for passing classId/className to DynamicDataGrid)
+  const activeTabObject = useMemo(() => {
+    if (!activeTab) return null;
+    return classTabs.find(t => t.classId === activeTab);
+  }, [activeTab, classTabs]);
+
   // Open class in new browser tab
   const openInNewWindow = (classId, className) => {
     const url = `/class-view/${classId}?className=${encodeURIComponent(className)}`;
@@ -175,8 +181,13 @@ function ClassTabbedView({ data, user }) {
 
       {/* Active tab content */}
       <div className="tab-content">
-        {activeTab ? (
-          <DynamicDataGrid data={activeTabData} />
+        {activeTab && activeTabObject ? (
+          <DynamicDataGrid 
+            key={activeTab}
+            data={activeTabData} 
+            classId={activeTabObject.classId}
+            className={activeTabObject.className}
+          />
         ) : (
           <div className="no-data-message">
             <p>Seleziona un tab per visualizzare i dati.</p>

@@ -1,90 +1,88 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import DataDetailModal from './DataDetailModal';
 import './RecordDetailModal.css';
 
 /**
- * RecordDetailModal - Modal per Visualizzazione/Modifica Record Completo
+ * RecordDetailModal - Modal per Visualizzazione/Modifica Record
  * 
- * SCOPO:
- * Mostra TUTTI i campi di un record (anche quelli nascosti nella griglia)
- * in un form editabile con tre azioni: ADD (insert), RWT (update), DEL (delete)
+ * ARCHITETTURA:
+ * Il popup è SEMPRE costruito dallo schema (reflection Java).
+ * Lo schema definisce: quali campi mostrare, i loro tipi, l'ordine.
+ * Se il record esiste, i valori vengono popolati. Se no, restano vuoti.
  * 
- * DUE MODALITÀ D'USO:
- * 
- * 1. VISUALIZZA/MODIFICA record esistente (badge 📋 su riga grid)
- *    - Passa isNewRecord={false}
- *    - Mostra tutti e tre i bottoni: ADD, RWT, DEL
- *    - Toggle "Abilita Modifica" per editare campi
- * 
- * 2. INSERISCI nuovo record (badge ➕ Nuovo Record in header)
- *    - Passa isNewRecord={true}
- *    - Mostra solo bottone ADD
- *    - Editing automaticamente abilitato
- *    - record contiene template vuoto (tutti campi = null o default)
- * 
- * FILTRAGGIO CAMPI:
- * Esclude stessi campi interni della grid:
- * - Metadata: _rowId, _type (interni React/TanStack)
- * - Timestamp: gestito separatamente (solo visualizzazione)
- * - Campi SDP: cLASS_ID, classid, class, sMPClassId, className
- * 
- * GESTIONE TIPI DATI:
- * - Boolean: Checkbox
- * - Number: Input type="number"
- * - String: Input type="text"
- * - Array/Object: Solo visualizzazione "(non modificabile)"
- * 
- * TODO FUTURE:
- * - Combo/select per campi enum (es: Side: BUY/SELL)
- * - Validazione campi prima di submit
- * - Date picker per campi timestamp
- * - Nested object editor (attualmente read-only)
- * 
- * AZIONI:
- * - ADD: Inserisce nuovo record (TODO: implementare SDP transaction)
- * - RWT: Aggiorna record esistente (TODO: implementare SDP transaction)
- * - DEL: Elimina record (TODO: implementare SDP transaction)
+ * UN SOLO CODICE per entrambi i casi:
+ * - Record esistente: schema → struttura, record → valori
+ * - Nuovo record: schema → struttura, valori = default (null/0/false)
  * 
  * @param {boolean} isOpen - Controlla visibilità modal
  * @param {function} onClose - Callback per chiudere modal
- * @param {object} record - Record da visualizzare/modificare
+ * @param {object} record - Record con valori (può essere template vuoto)
  * @param {function} onAction - Callback per azioni (ADD/RWT/DEL)
- * @param {boolean} isNewRecord - Se true, è inserimento nuovo record
- * 
- * @see DynamicDataGrid.jsx - Apre questo modal con badge 📋 e ➕
- * @see MAINTENANCE.md#scenario-4 - Come implementare transazioni SDP
+ * @param {boolean} isNewRecord - Se true, editing abilitato di default
+ * @param {object} schema - Schema classe dalla reflection Java
  */
-function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = false }) {
+function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = false, schema = null }) {
   const [editedData, setEditedData] = useState({});
   const [isEditing, setIsEditing] = useState(false);
   const [structuredDataModal, setStructuredDataModal] = useState(null);
 
+  // Lista campi definita dallo SCHEMA (unica fonte di verità per la struttura)
+  // Se lo schema non è disponibile, fallback su Object.keys(record)
+  const fields = useMemo(() => {
+    if (schema?.fields) {
+      return schema.fields.map(f => f.name);
+    }
+    // Fallback: usa le chiavi del record, filtrate
+    if (!record) return [];
+    return Object.keys(record).filter(
+      key => !key.startsWith('_') && 
+             key !== 'timestamp' && 
+             key !== 'className' && 
+             key !== 'cLASS_ID' && 
+             key !== 'classid' &&
+             key !== 'classId' &&
+             key !== 'ClassId' &&
+             key !== 'class' &&
+             key !== 'sMPClassId'
+    );
+  }, [schema, record]);
+
+  // Build a fieldName → fieldSchema map for quick type lookup
+  const fieldSchemaMap = useMemo(() => {
+    if (!schema?.fields) return {};
+    const map = {};
+    schema.fields.forEach(f => { map[f.name] = f; });
+    return map;
+  }, [schema]);
+
   useEffect(() => {
     if (record && isOpen) {
-      // INIZIALIZZAZIONE FORM
-      // Copia tutti i campi dal record escludendo metadata tecnici
-      // Stessa logica di filtraggio della grid per coerenza
+      // Inizializza i valori del form.
+      // I CAMPI sono definiti dallo schema (o dal record come fallback).
+      // I VALORI vengono dal record: se il campo esiste nel record, usa
+      // quel valore; altrimenti usa il default dal tipo dello schema.
       const initialData = {};
-      Object.keys(record).forEach(key => {
-        if (!key.startsWith('_') &&          // Escludi _rowId, _type
-            key !== 'timestamp' &&            // Timestamp non editabile
-            key !== 'className' &&            // Già mostrato in header
-            key !== 'cLASS_ID' &&             // Metadata SDP
-            key !== 'classid' &&              // Metadata SDP (lowercase)
-            key !== 'classId' &&              // Metadata SDP (camelCase)
-            key !== 'ClassId' &&              // Metadata SDP (PascalCase)
-            key !== 'class' &&                // Duplicate
-            key !== 'sMPClassId') {           // Metadata SDP
-          initialData[key] = record[key];
+      fields.forEach(fieldName => {
+        if (record[fieldName] !== undefined) {
+          initialData[fieldName] = record[fieldName];
+        } else {
+          // Campo nello schema ma non nel record: usa default per tipo
+          const fieldSchema = fieldSchemaMap[fieldName];
+          if (fieldSchema) {
+            if (fieldSchema.array) initialData[fieldName] = [];
+            else if (fieldSchema.nested) initialData[fieldName] = {};
+            else if (fieldSchema.jsonType === 'boolean') initialData[fieldName] = false;
+            else if (fieldSchema.jsonType === 'number') initialData[fieldName] = 0;
+            else initialData[fieldName] = null;
+          } else {
+            initialData[fieldName] = null;
+          }
         }
       });
       setEditedData(initialData);
-      
-      // AUTO-ENABLE editing per nuovi record
-      // (non ha senso inserire record in read-only)
       setIsEditing(isNewRecord);
     }
-  }, [record, isOpen, isNewRecord]);
+  }, [record, isOpen, isNewRecord, fields, fieldSchemaMap]);
 
   if (!isOpen || !record) return null;
 
@@ -147,15 +145,47 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
    * - Date → date picker
    * - Nested objects → modal ricorsivo o JSON editor
    */
+  /**
+   * Determina il tipo di un campo usando UNA SOLA logica:
+   * 1. Se il valore ha un tipo runtime riconoscibile, usa quello
+   * 2. Altrimenti consulta lo schema (stessa reflection Java)
+   * 
+   * Questo garantisce comportamento identico per record nuovi e esistenti.
+   */
+  const getFieldType = (fieldName, value) => {
+    // Runtime type detection (quando il valore è presente)
+    if (Array.isArray(value)) return 'array';
+    if (typeof value === 'object' && value !== null) return 'object';
+    if (typeof value === 'boolean') return 'boolean';
+    if (typeof value === 'number') return 'number';
+    if (typeof value === 'string' && value !== '') return 'string';
+    
+    // Schema type detection (quando il valore è null/0/vuoto)
+    const fieldSchema = fieldSchemaMap[fieldName];
+    if (fieldSchema) {
+      if (fieldSchema.array) return 'array';
+      if (fieldSchema.nested) return 'object';
+      if (fieldSchema.jsonType === 'boolean') return 'boolean';
+      if (fieldSchema.jsonType === 'number') return 'number';
+    }
+    
+    return 'string';
+  };
+
   const renderFieldInput = (fieldName, value) => {
+    const fieldType = getFieldType(fieldName, value);
+    
     // CASO 1: Tipi complessi (Array, Object)
     // Mostra badge per aprire modal editabile
-    if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
-      const typeLabel = Array.isArray(value) ? `Array[${value.length}]` : (value._type || 'Object');
+    if (fieldType === 'array' || fieldType === 'object') {
+      const displayValue = value ?? (fieldType === 'array' ? [] : {});
+      const typeLabel = fieldType === 'array' 
+        ? `Array[${Array.isArray(displayValue) ? displayValue.length : 0}]` 
+        : (displayValue?._type || 'Object');
       return (
         <button
           className="field-structured-btn"
-          onClick={() => setStructuredDataModal({ data: value, title: fieldName, fieldName })}
+          onClick={() => setStructuredDataModal({ data: displayValue, title: fieldName, fieldName })}
           type="button"
         >
           {typeLabel} 👁️ {isEditing ? '✏️' : ''}
@@ -164,7 +194,7 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
     }
 
     // CASO 2: Boolean → Checkbox
-    if (typeof value === 'boolean') {
+    if (fieldType === 'boolean') {
       return (
         <label className="field-checkbox">
           <input
@@ -178,8 +208,8 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
       );
     }
 
-    // Number
-    if (typeof value === 'number') {
+    // CASO 3: Number
+    if (fieldType === 'number') {
       return (
         <input
           type="number"
@@ -191,7 +221,7 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
       );
     }
 
-    // String (default)
+    // CASO 4: String (default)
     return (
       <input
         type="text"
@@ -202,18 +232,6 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
       />
     );
   };
-
-  const fields = Object.keys(record).filter(
-    key => !key.startsWith('_') && 
-           key !== 'timestamp' && 
-           key !== 'className' && 
-           key !== 'cLASS_ID' && 
-           key !== 'classid' &&
-           key !== 'classId' &&
-           key !== 'ClassId' &&
-           key !== 'class' &&
-           key !== 'sMPClassId'
-  );
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -258,7 +276,7 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
               <div key={fieldName} className="field-row">
                 <label className="field-label">{fieldName}</label>
                 <div className="field-value">
-                  {renderFieldInput(fieldName, editedData[fieldName] ?? record[fieldName])}
+                  {renderFieldInput(fieldName, editedData[fieldName])}
                 </div>
               </div>
             ))}
