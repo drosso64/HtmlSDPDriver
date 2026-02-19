@@ -345,16 +345,6 @@ function DynamicDataGrid({ data }) {
     },
   });
 
-  if (!data || data.length === 0) {
-    return (
-      <div className="grid-container">
-        <div className="empty-message">
-          Nessun dato disponibile. Effettua una sottoscrizione per visualizzare i dati.
-        </div>
-      </div>
-    );
-  }
-
   // Calcola valori unici per ogni colonna (per Excel filter)
   const uniqueValuesByColumn = useMemo(() => {
     const result = {};
@@ -373,7 +363,7 @@ function DynamicDataGrid({ data }) {
 
   return (
     <div className="grid-container">
-      {/* Table info */}
+      {/* Table info and Add Record button - always shown */}
       <div className="table-info">
         <span>
           Visualizzati {table.getFilteredRowModel().rows.length} di {data.length} record
@@ -388,9 +378,15 @@ function DynamicDataGrid({ data }) {
         </button>
       </div>
 
-      {/* Data table */}
-      <div className="table-container">
-        <table className="data-table tanstack-table">
+      {/* Data table or empty message */}
+      {data.length === 0 ? (
+        <div className="empty-message">
+          📭 Nessun dato disponibile. Clicca "Nuovo Record" per aggiungere il primo record.
+        </div>
+      ) : (
+        <>
+          <div className="table-container">
+            <table className="data-table tanstack-table">
           <thead>
             {/* Header row only */}
             <tr className="header-row">
@@ -476,8 +472,9 @@ function DynamicDataGrid({ data }) {
         </table>
       </div>
 
-      {/* Pagination */}
-      <div className="pagination">
+      {/* Pagination - shown only when there's data */}
+      {data.length > 0 && (
+        <div className="pagination">
         <div className="pagination-info">
           <span>Record per pagina: </span>
           <select
@@ -531,6 +528,9 @@ function DynamicDataGrid({ data }) {
           </button>
         </div>
       </div>
+      )}
+      </>
+      )}
 
       {/* Data Detail Modal */}
       {modalData && (

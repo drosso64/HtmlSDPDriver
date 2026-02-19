@@ -4,7 +4,7 @@ import ClassTabbedView from './ClassTabbedView';
 import './DataGrid.css';
 
 function DataGrid() {
-  const { isConnected, allMessages, error } = useWebSocket();
+  const { isConnected, allMessages, marketData, error } = useWebSocket();
   const [status, setStatus] = useState('Connessione al server...');
   const [user, setUser] = useState(null);
 
@@ -16,13 +16,16 @@ function DataGrid() {
     }
   }, []);
 
-  console.log('🔷 DataGrid render - allMessages disponibili:', allMessages?.length || 0);
+  console.log('🔷 DataGrid render - allMessages disponibili:', Object.keys(allMessages || {}).length);
 
   // Parsing dei dati per la griglia
   const parsedData = useMemo(() => {
     console.log('🔄 DataGrid: Parsing allMessages (Map structure)');
+    console.log('📊 allMessages keys:', Object.keys(allMessages || {}));
+    console.log('📊 marketData keys:', Object.keys(marketData || {}));
     
     if (!allMessages || Object.keys(allMessages).length === 0) {
+      console.log('⚠️ No allMessages, returning empty array');
       return [];
     }
     
@@ -31,31 +34,55 @@ function DataGrid() {
     const flatArray = [];
     
     Object.entries(allMessages).forEach(([classId, hashKeyMap]) => {
-      Object.values(hashKeyMap).forEach(message => {
-        let parsedDataObj = message.data;
-        
-        if (typeof message.data === 'string') {
-          try {
-            parsedDataObj = JSON.parse(message.data);
-          } catch (e) {
-            console.error('❌ Failed to parse data JSON:', e);
-            parsedDataObj = { raw: message.data };
-          }
+      const numRecords = Object.keys(hashKeyMap).length;
+      console.log(`  - ClassId ${classId}: ${numRecords} records`);
+      
+      if (numRecords === 0) {
+        // Empty class (subscribed but no data yet)
+        // Create placeholder entry so TAB is created
+        const classInfo = marketData[classId];
+        console.log(`    🔍 Looking for marketData[${classId}]:`, classInfo);
+        if (classInfo && classInfo.className) {
+          console.log('📭 DataGrid: Empty class bucket for', classId, classInfo.className);
+          flatArray.push({
+            timestamp: classInfo.timestamp || new Date().toISOString(),
+            classId: Number(classId),
+            className: classInfo.className,
+            hashKey: null,
+            data: null,
+            isEmpty: true // Flag to identify placeholder
+          });
+        } else {
+          console.warn('⚠️ No marketData found for empty class', classId);
         }
-        
-        flatArray.push({
-          timestamp: message.timestamp,
-          classId: message.classId,
-          className: message.className,
-          hashKey: message.hashKey,
-          data: parsedDataObj
+      } else {
+        // Normal records
+        Object.values(hashKeyMap).forEach(message => {
+          let parsedDataObj = message.data;
+          
+          if (typeof message.data === 'string') {
+            try {
+              parsedDataObj = JSON.parse(message.data);
+            } catch (e) {
+              console.error('❌ Failed to parse data JSON:', e);
+              parsedDataObj = { raw: message.data };
+            }
+          }
+          
+          flatArray.push({
+            timestamp: message.timestamp,
+            classId: message.classId,
+            className: message.className,
+            hashKey: message.hashKey,
+            data: parsedDataObj
+          });
         });
-      });
+      }
     });
     
     console.log('✅ DataGrid: Converted Map to', flatArray.length, 'records');
     return flatArray;
-  }, [allMessages]);
+  }, [allMessages, marketData]);
 
   // Update status quando arrivano dati
   useEffect(() => {

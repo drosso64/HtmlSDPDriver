@@ -43,6 +43,7 @@ export const WebSocketProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const ws = useRef(null);
   const reconnectTimeout = useRef(null);
+  const shouldReconnect = useRef(true); // Track if reconnection should happen
   
   // Set di callback registrate dai componenti per ricevere notifiche
   // Pattern: Observer (ogni componente può registrare un handler)
@@ -53,6 +54,9 @@ export const WebSocketProvider = ({ children }) => {
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
       return;
     }
+
+    // Re-enable reconnection when explicitly connecting
+    shouldReconnect.current = true;
 
     try {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -156,18 +160,23 @@ export const WebSocketProvider = ({ children }) => {
       };
 
       ws.current.onclose = () => {
-        console.log('🔌 WebSocket disconnesso (globale) - resettando dati');
+        console.log('🔌 WebSocket disconnesso (globale)');
         setIsConnected(false);
         
         // Reset data on disconnect (backend may have stopped or user logged out)
         setAllMessages({});
         setMarketData({});
         
-        // Tentativo di riconnessione dopo 3 secondi
-        reconnectTimeout.current = setTimeout(() => {
-          console.log('🔄 Tentativo di riconnessione...');
-          connect();
-        }, 3000);
+        // Only attempt reconnection if not explicitly disconnected (logout)
+        if (shouldReconnect.current) {
+          console.log('🔄 Tentativo di riconnessione in 3 secondi...');
+          reconnectTimeout.current = setTimeout(() => {
+            console.log('🔄 Riconnessione...');
+            connect();
+          }, 3000);
+        } else {
+          console.log('🚫 Reconnessione disabilitata (logout utente)');
+        }
       };
     } catch (err) {
       console.error('❌ Errore creazione WebSocket:', err);
@@ -176,6 +185,7 @@ export const WebSocketProvider = ({ children }) => {
   }, []);
 
   const disconnect = useCallback(() => {
+    console.log('🔌 Disconnecting WebSocket');
     if (reconnectTimeout.current) {
       clearTimeout(reconnectTimeout.current);
     }
@@ -185,6 +195,24 @@ export const WebSocketProvider = ({ children }) => {
     }
     setIsConnected(false);
   }, []);
+
+  const logout = useCallback(() => {
+    console.log('🚪 WebSocket logout - clearing all state and disabling reconnection');
+    
+    // Disable reconnection
+    shouldReconnect.current = false;
+    
+    // Clear all state immediately
+    setAllMessages({});
+    setMarketData({});
+    setError(null);
+    
+    // Clear message handlers
+    messageHandlers.current.clear();
+    
+    // Disconnect WebSocket
+    disconnect();
+  }, [disconnect]);
 
   const removeClassData = useCallback((classId) => {
     console.log('🗑️ Removing data for classId:', classId);
@@ -208,6 +236,42 @@ export const WebSocketProvider = ({ children }) => {
     console.log('🔄 Resetting all WebSocket data (Delete All triggered)');
     setAllMessages({});
     setMarketData({});
+  }, []);
+
+  const initializeClass = useCallback((classId, className) => {
+    console.log('🆕 Initializing empty tab for classId:', classId, 'className:', className);
+    
+    // Initialize empty bucket in allMessages (creates the TAB even without data)
+    setAllMessages(prev => {
+      // Don't overwrite if already has data
+      if (prev[classId] && Object.keys(prev[classId]).length > 0) {
+        console.log('⚠️ Class already has data, skipping initialization');
+        return prev;
+      }
+      
+      const updated = {
+        ...prev,
+        [classId]: {} // Empty bucket - will show empty grid but TAB exists
+      };
+      console.log('✅ allMessages updated. Keys:', Object.keys(updated));
+      return updated;
+    });
+    
+    // Initialize empty marketData entry
+    setMarketData(prev => {
+      const updated = {
+        ...prev,
+        [classId]: {
+          classId: classId,
+          className: className,
+          data: null,
+          hashKey: null,
+          timestamp: new Date().toISOString()
+        }
+      };
+      console.log('✅ marketData updated. Keys:', Object.keys(updated));
+      return updated;
+    });
   }, []);
 
   const addMessageHandler = useCallback((handler) => {
@@ -240,8 +304,10 @@ export const WebSocketProvider = ({ children }) => {
     error,
     connect,
     disconnect,
+    logout, // NEW: Proper logout with state cleanup
     removeClassData,
     resetAllData,
+    initializeClass, // NEW: Initialize empty class for TAB creation
     addMessageHandler
   };
 

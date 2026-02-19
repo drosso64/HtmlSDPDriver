@@ -13,11 +13,18 @@ import Header from './components/Header'
 function AppContent({ isAuthenticated, user, onLogin, onLogout }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const ws = useWebSocket(); // Access WebSocket context
   const isStandaloneView = location.pathname.startsWith('/class-view');
 
   console.log('🔍 AppContent render - pathname:', location.pathname, 'isStandalone:', isStandaloneView);
 
   const handleLogoutWithRedirect = async () => {
+    // Clear WebSocket state before logout
+    if (ws?.logout) {
+      console.log('🚪 Calling WebSocket logout to clear state');
+      ws.logout();
+    }
+    
     await onLogout();
     navigate('/login', { replace: true });
   };

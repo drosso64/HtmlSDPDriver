@@ -74,10 +74,12 @@ function Database() {
     
     try {
       const response = await api.delete('/database/marketdata/all');
-      alert(`✅ Deleted ${response.data.deletedCount} records`);
+      alert(`✅ ${response.data.message || `Deleted ${response.data.deletedCount} records`}`);
       
-      // Don't reset WebSocket state - let backend communicate what was deleted
-      // Backend will stop subscriptions and WebSocket will update accordingly
+      // Reset WebSocket state to remove all TABs
+      if (ws?.resetAllData) {
+        ws.resetAllData();
+      }
       
       loadStats();
       loadClasses();

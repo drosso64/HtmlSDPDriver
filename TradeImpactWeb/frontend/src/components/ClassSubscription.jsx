@@ -10,7 +10,7 @@ function ClassSubscription({ user }) {
   const [subscribing, setSubscribing] = useState(false);
   
   // WebSocket per dati in tempo reale
-  const { isConnected, marketData, error: wsError } = useWebSocket();
+  const ws = useWebSocket();
 
   useEffect(() => {
     fetchClasses();
@@ -65,6 +65,26 @@ function ClassSubscription({ user }) {
 
       if (response.ok) {
         const result = await response.json();
+        console.log('📦 Subscription result:', result);
+        
+        // Initialize tabs for all successfully subscribed classes
+        if (result.results && ws?.initializeClass) {
+          console.log('🔍 Processing', result.results.length, 'subscription results');
+          result.results.forEach(r => {
+            console.log('  - ClassId:', r.classId, 'Status:', r.status, 'ClassName:', r.className);
+            if (r.status === 'success' && r.classId && r.className) {
+              console.log('🆕 Initializing tab for:', r.classId, r.className);
+              ws.initializeClass(r.classId, r.className);
+            }
+          });
+        } else {
+          console.warn('⚠️ Cannot initialize tabs:', {
+            hasResults: !!result.results,
+            hasInitializeClass: !!ws?.initializeClass,
+            ws: ws
+          });
+        }
+        
         alert(`Sottoscrizioni completate:\n✓ Successi: ${result.success}\n✗ Fallimenti: ${result.failures}`);
         setSelectedClasses(new Set());
       } else {
@@ -120,9 +140,9 @@ function ClassSubscription({ user }) {
       <h1>Sottoscrizioni Classi</h1>
       
       {/* Status WebSocket */}
-      <div className={`websocket-status ${isConnected ? 'connected' : 'disconnected'}`}>
-        WebSocket: {isConnected ? '🟢 Connesso' : '🔴 Disconnesso'}
-        {wsError && <span className="ws-error"> - {wsError}</span>}
+      <div className={`websocket-status ${ws?.isConnected ? 'connected' : 'disconnected'}`}>
+        WebSocket: {ws?.isConnected ? '🟢 Connesso' : '🔴 Disconnesso'}
+        {ws?.error && <span className="ws-error"> - {ws.error}</span>}
       </div>
       
       <div className="subscription-info">
@@ -130,9 +150,9 @@ function ClassSubscription({ user }) {
         <p className="active-count">
           Classi selezionate: <strong>{selectedClasses.size}</strong> / {classes.length}
         </p>
-        {Object.keys(marketData).length > 0 && (
+        {Object.keys(ws?.marketData || {}).length > 0 && (
           <p className="data-count">
-            Dati ricevuti per <strong>{Object.keys(marketData).length}</strong> classi
+            Dati ricevuti per <strong>{Object.keys(ws.marketData).length}</strong> classi
           </p>
         )}
       </div>
@@ -172,7 +192,7 @@ function ClassSubscription({ user }) {
                   <div className="class-info">
                     <div className="class-name">
                       {classItem.simpleClassName || classItem.className}
-                      {marketData[classItem.classId] && (
+                      {ws?.marketData?.[classItem.classId] && (
                         <span className="live-indicator" title="Dati in tempo reale">📡</span>
                       )}
                     </div>
@@ -181,10 +201,10 @@ function ClassSubscription({ user }) {
                         <span className="class-description">{classItem.description}</span>
                       </div>
                     )}
-                    {marketData[classItem.classId] && (
+                    {ws?.marketData?.[classItem.classId] && (
                       <div className="market-data-preview">
                         <small>
-                          Ultimo aggiornamento: {new Date(marketData[classItem.classId].timestamp).toLocaleTimeString('it-IT')}
+                          Ultimo aggiornamento: {new Date(ws.marketData[classItem.classId].timestamp).toLocaleTimeString('it-IT')}
                         </small>
                       </div>
                     )}

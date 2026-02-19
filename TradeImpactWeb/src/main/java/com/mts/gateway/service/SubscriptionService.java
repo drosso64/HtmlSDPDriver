@@ -42,6 +42,7 @@ public class SubscriptionService {
     private final ClassMetadataRepository classMetadataRepository;
     private final GenericSMPSerializer serializer;
     private final SDPConnectionPool connectionPool;
+    private final DynamicTableService dynamicTableService; // NEW: For creating tables on subscription
     
     /**
      * Create a new subscription
@@ -54,6 +55,9 @@ public class SubscriptionService {
         ActiveSubscriptionService.SubscriptionInfo existing = activeSubscriptionService.getSubscription(username, classId);
         if (existing != null) {
             log.info("Subscription already exists: classId={} subscriptionKey={}", classId, existing.getSubscriptionKey());
+            // Ensure table exists even for existing subscriptions (in case it was dropped)
+            dynamicTableService.ensureTableExists(classId);
+            log.info("📊 Ensured table exists for existing subscription classId={}", classId);
             return existing;
         }
         
@@ -70,6 +74,11 @@ public class SubscriptionService {
             
             // Store in memory
             activeSubscriptionService.addSubscription(username, classId, metadata.getSimpleClassName(), subscriptionKey);
+            
+            // NEW: Create database table immediately (even if no data arrives yet)
+            // This allows users to add records to the class even before receiving any market data
+            dynamicTableService.ensureTableExists(classId);
+            log.info("📊 Ensured table exists for classId={}", classId);
             
             log.info("Subscription activated: classId={} className={} key={}", 
                 classId, metadata.getSimpleClassName(), subscriptionKey);

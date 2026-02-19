@@ -17,11 +17,14 @@ function ClassTabbedView({ data, user }) {
 
   // Group data by class
   const classTabs = useMemo(() => {
+    console.log('🔷 ClassTabbedView: Grouping', data?.length || 0, 'records');
     const grouped = {};
     data.forEach(item => {
+      console.log('  - Processing item:', item.classId, item.className, 'isEmpty:', item.isEmpty);
       const classId = item.classId;
       // Skip closed subscriptions
       if (closedClassIds.has(classId)) {
+        console.log('    ⏭️ Skipping closed classId:', classId);
         return;
       }
       if (!grouped[classId]) {
@@ -30,14 +33,23 @@ function ClassTabbedView({ data, user }) {
           className: item.className,
           records: []
         };
+        console.log('    ✅ Created tab for classId:', classId, 'className:', item.className);
       }
-      grouped[classId].records.push(item);
+      // Don't add placeholder records to the grid (isEmpty flag)
+      // They're only used to create the TAB
+      if (!item.isEmpty) {
+        grouped[classId].records.push(item);
+      } else {
+        console.log('    📭 Placeholder record for empty class (TAB only)');
+      }
     });
 
     // Convert to array and sort by className
-    return Object.values(grouped).sort((a, b) => 
+    const tabs = Object.values(grouped).sort((a, b) => 
       a.className.localeCompare(b.className)
     );
+    console.log('✅ ClassTabbedView: Created', tabs.length, 'tabs:', tabs.map(t => `${t.classId}:${t.className}`));
+    return tabs;
   }, [data, closedClassIds]);
 
   // Set active tab to first available class or restore from session storage
@@ -163,11 +175,11 @@ function ClassTabbedView({ data, user }) {
 
       {/* Active tab content */}
       <div className="tab-content">
-        {activeTab && activeTabData.length > 0 ? (
+        {activeTab ? (
           <DynamicDataGrid data={activeTabData} />
         ) : (
           <div className="no-data-message">
-            <p>Nessun dato disponibile per questa classe.</p>
+            <p>Seleziona un tab per visualizzare i dati.</p>
           </div>
         )}
       </div>

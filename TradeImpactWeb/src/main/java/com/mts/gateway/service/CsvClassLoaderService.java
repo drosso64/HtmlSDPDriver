@@ -137,6 +137,11 @@ public class CsvClassLoaderService {
         
         try {
             String className = parts[0].trim();
+            // Remove surrounding quotes if present (CSV may quote string fields)
+            if (className.startsWith("\"") && className.endsWith("\"")) {
+                className = className.substring(1, className.length() - 1);
+            }
+            
             Long classId = Long.parseLong(parts[1].trim());
             String serviceId = parts[2].trim();
             String description = parts.length > 3 ? parts[3].trim() : null;

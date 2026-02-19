@@ -1,6 +1,7 @@
 package com.mts.gateway.controller;
 
 
+import com.mts.gateway.repository.ClassMetadataRepository;
 import com.mts.gateway.repository.MarketDataRepository;
 import com.mts.gateway.repository.SubscriptionRepository;
 import com.mts.gateway.service.ActiveSubscriptionService;
@@ -46,6 +47,7 @@ public class DatabaseManagementController {
     private final SubscriptionRepository subscriptionRepository; // For managing subscriptions
     private final SubscriptionService subscriptionService; // For stopping active subscriptions
     private final ActiveSubscriptionService activeSubscriptionService; // For getting active subscriptions in memory
+    private final ClassMetadataRepository classMetadataRepository; // NEW: For getting class names
     
     /**
      * Helper method to convert CLOB or String to String
@@ -203,10 +205,20 @@ public class DatabaseManagementController {
     
     /**
      * Get unique classes with counts from dynamic tables
+     * ONLY shows tables that have either:
+     * - Active subscriptions (even with 0 records)
+     * - OR data (recordCount > 0)
      */
     @GetMapping("/classes")
     public ResponseEntity<List<ClassSummary>> getClassSummaries() {
         log.info("📁 Fetching class summaries from dynamic tables");
+        
+        // Get all active subscriptions
+        List<Long> activeClassIds = activeSubscriptionService.getAllActiveSubscriptions().stream()
+            .map(pair -> pair.getSubscriptionInfo().getClassId())
+            .distinct()
+            .collect(Collectors.toList());
+        log.info("📊 Active subscriptions for {} classes", activeClassIds.size());
         
         // Discover all market_data_* tables
         String discoverQuery = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES " +
@@ -248,6 +260,33 @@ public class DatabaseManagementController {
                             .recordCount(count)
                             .lastUpdate(lastUpdate != null ? lastUpdate.toString() : null)
                             .build();
+                    } else {
+                        // Empty table - ONLY show if there's an active subscription
+                        boolean hasActiveSubscription = activeClassIds.contains(classId);
+                        if (!hasActiveSubscription) {
+                            log.info("📭 Skipping empty table without subscription: classId={}", classId);
+                            return null; // Don't show empty tables without active subscriptions
+                        }
+                        
+                        // Get class name from metadata
+                        String className = "Class_" + classId; // Fallback
+                        try {
+                            var classInfo = classMetadataRepository.getClassInfo(classId);
+                            if (classInfo != null) {
+                                className = classInfo.getSimpleClassName();
+                            }
+                        } catch (Exception ex) {
+                            log.warn("Could not get class info for {}: {}", classId, ex.getMessage());
+                        }
+                        
+                        log.info("📭 Empty table WITH active subscription: classId={} className={}", classId, className);
+                        
+                        return ClassSummary.builder()
+                            .classId(classId)
+                            .className(className)
+                            .recordCount(0L)
+                            .lastUpdate(null)
+                            .build();
                     }
                 } catch (Exception e) {
                     log.error("Error processing table {}: {}", tableName, e.getMessage());
@@ -258,17 +297,18 @@ public class DatabaseManagementController {
             .sorted((a, b) -> Long.compare(b.getRecordCount(), a.getRecordCount()))
             .collect(Collectors.toList());
         
-        log.info("📁 Returning {} class summaries", summaries.size());
+        log.info("📁 Returning {} class summaries (filtered by active subscriptions)", summaries.size());
         return ResponseEntity.ok(summaries);
     }
     
     /**
      * Delete all market data from all dynamic tables AND stop all active subscriptions
+     * Also DROPs all tables
      */
     @DeleteMapping("/marketdata/all")
     @Transactional
     public ResponseEntity<DeleteResult> deleteAllMarketData() {
-        log.warn("⚠️ Deleting ALL market data and stopping all subscriptions");
+        log.warn("⚠️ Deleting ALL market data, stopping all subscriptions and dropping all tables");
         
         // 1. Stop all active subscriptions (from in-memory service)
         log.info("🛑 Stopping all active subscriptions...");
@@ -302,38 +342,49 @@ public class DatabaseManagementController {
             .map(Object::toString)
             .collect(Collectors.toList());
         
-        // 4. Delete all records from market data tables
+        // 4. DROP all market data tables (instead of just deleting data)
         long totalDeleted = 0;
+        int droppedTables = 0;
         for (String tableName : tableNames) {
             try {
-                // Count before delete
+                // Count before drop
                 String countQuery = "SELECT COUNT(*) FROM " + tableName;
                 long count = ((Number) entityManager.createNativeQuery(countQuery).getSingleResult()).longValue();
                 
-                // Delete all records
-                String deleteQuery = "DELETE FROM " + tableName;
-                entityManager.createNativeQuery(deleteQuery).executeUpdate();
+                // DROP the table entirely
+                String dropQuery = "DROP TABLE IF EXISTS " + tableName;
+                entityManager.createNativeQuery(dropQuery).executeUpdate();
+                
+                // Extract classId and remove from cache
+                try {
+                    String classIdStr = tableName.replace("MARKET_DATA_", "").replace("market_data_", "");
+                    Long tableClassId = Long.parseLong(classIdStr);
+                    dynamicTableService.removeFromCache(tableClassId);
+                } catch (Exception ex) {
+                    log.warn("Could not parse classId from table name {}", tableName);
+                }
                 
                 totalDeleted += count;
-                log.info("🗑️ Deleted {} records from {}", count, tableName);
+                droppedTables++;
+                log.info("🗑️ Dropped table {} with {} records", tableName, count);
             } catch (Exception e) {
-                log.error("Error deleting from table {}: {}", tableName, e.getMessage());
+                log.error("Error dropping table {}: {}", tableName, e.getMessage());
             }
         }
         
-        log.info("✅ Total: unsubscribed {} active, deleted {} subscription records, {} market data records from {} tables", 
-                 unsubscribeCount, subscriptionsDeleted, totalDeleted, tableNames.size());
+        log.info("✅ Total: unsubscribed {} active, deleted {} subscription records, dropped {} tables with {} total records", 
+                 unsubscribeCount, subscriptionsDeleted, droppedTables, totalDeleted);
         return ResponseEntity.ok(new DeleteResult(totalDeleted, 
-            "Stopped " + unsubscribeCount + " active subscriptions and deleted all market data from " + tableNames.size() + " tables"));
+            "Stopped " + unsubscribeCount + " active subscriptions and dropped " + droppedTables + " tables"));
     }
     
     /**
-     * Delete by classId from dynamic table
+     * Delete by classId from dynamic table and DROP the table
      */
     @DeleteMapping("/marketdata/class/{classId}")
     @Transactional
     public ResponseEntity<DeleteResult> deleteByClass(@PathVariable Long classId) {
-        log.warn("⚠️ Deleting market data and stopping subscriptions for class: {}", classId);
+        log.warn("⚠️ Deleting market data, stopping subscriptions and dropping table for class: {}", classId);
         
         // 1. Stop all active subscriptions for this class
         log.info("🛑 Stopping subscriptions for classId {}...", classId);
@@ -355,7 +406,7 @@ public class DatabaseManagementController {
         }
         log.info("✅ Stopped {} active subscription(s) for classId {}", unsubscribeCount, classId);
         
-        // 2. Delete data from table
+        // 2. Drop the table entirely
         String tableName = dynamicTableService.getTableName(classId);
         
         if (!dynamicTableService.tableExists(classId)) {
@@ -369,18 +420,21 @@ public class DatabaseManagementController {
             String countQuery = "SELECT COUNT(*) FROM " + tableName;
             long count = ((Number) entityManager.createNativeQuery(countQuery).getSingleResult()).longValue();
             
-            // Delete all records from table
-            String deleteQuery = "DELETE FROM " + tableName;
-            entityManager.createNativeQuery(deleteQuery).executeUpdate();
+            // DROP the table entirely (instead of just deleting data)
+            String dropQuery = "DROP TABLE IF EXISTS " + tableName;
+            entityManager.createNativeQuery(dropQuery).executeUpdate();
             
-            log.info("✅ Deleted {} records from {}", count, tableName);
+            // Remove from DynamicTableService cache
+            dynamicTableService.removeFromCache(classId);
+            
+            log.info("✅ Dropped table {} with {} records", tableName, count);
             return ResponseEntity.ok(new DeleteResult(count, 
-                String.format("Stopped %d subscription(s), deleted %d records for class %d", 
-                    unsubscribeCount, count, classId)));
+                String.format("Stopped %d subscription(s), dropped table for class %d (had %d records)", 
+                    unsubscribeCount, classId, count)));
         } catch (Exception e) {
-            log.error("Error deleting from {}: {}", tableName, e.getMessage());
+            log.error("Error dropping table {}: {}", tableName, e.getMessage());
             return ResponseEntity.internalServerError()
-                .body(new DeleteResult(0, "Error deleting: " + e.getMessage()));
+                .body(new DeleteResult(0, "Error dropping table: " + e.getMessage()));
         }
     }
     

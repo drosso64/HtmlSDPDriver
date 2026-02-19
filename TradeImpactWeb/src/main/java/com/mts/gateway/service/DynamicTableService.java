@@ -125,6 +125,14 @@ public class DynamicTableService {
     }
     
     /**
+     * Remove table from cache (called when table is dropped)
+     */
+    public void removeFromCache(Long classId) {
+        createdTables.remove(classId);
+        log.info("🗑️ Removed classId {} from table cache", classId);
+    }
+    
+    /**
      * Clear the cache (useful for testing)
      */
     public void clearCache() {
