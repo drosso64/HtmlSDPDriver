@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import './DataDetailModal.css';
 
 /**
@@ -39,17 +39,73 @@ function DataDetailModal({ isOpen, onClose, data, title, isEditing = false, onSa
     }
   }, [data, schema]);
 
+  // Mappa fieldName → fieldSchema per lookup rapido del sotto-schema
+  // Serve per propagare lo schema ai livelli annidati
+  const fieldSchemaMap = useMemo(() => {
+    if (!schema?.fields) return {};
+    const map = {};
+    schema.fields.forEach(f => { map[f.name] = f; });
+    return map;
+  }, [schema]);
+
   if (!isOpen) return null;
 
-  const handleNestedClick = (nestedData, nestedTitle) => {
-    setNestedModal({ data: nestedData, title: nestedTitle });
+  /**
+   * Apre il modal annidato per un campo complesso.
+   * 
+   * IMPORTANTE: cerca il sotto-schema per il campo cliccato.
+   * Per un campo array/nested, il sotto-schema è fieldSchema.nestedSchema.
+   * Questo garantisce che il modal annidato possa:
+   * - Mostrare campi per oggetti vuoti (creazione nuovo record)
+   * - Creare righe vuote per array vuoti
+   * - Propagare ricorsivamente lo schema a ulteriori livelli
+   */
+  const handleNestedClick = (nestedData, nestedTitle, fieldName, arrayIndex) => {
+    // Cerca il sotto-schema per questo campo
+    const fieldSchema = fieldSchemaMap[fieldName];
+    const nestedSchema = fieldSchema?.nestedSchema || null;
+    setNestedModal({ data: nestedData, title: nestedTitle, fieldName, arrayIndex, schema: nestedSchema });
+  };
+
+  const handleNestedSave = (newData) => {
+    // Aggiorna il campo nel parent editedData
+    const { fieldName, arrayIndex } = nestedModal;
+    setEditedData(prev => {
+      if (Array.isArray(prev) && arrayIndex != null) {
+        // Parent è un array: aggiorna l'elemento all'indice specificato
+        const newArray = [...prev];
+        if (fieldName && typeof newArray[arrayIndex] === 'object' && !Array.isArray(newArray[arrayIndex])) {
+          // Aggiorna un campo specifico dell'elemento (es. editedData[2].legs = newData)
+          newArray[arrayIndex] = { ...newArray[arrayIndex], [fieldName]: newData };
+        } else {
+          // Sostituisce l'intero elemento (es. editedData[2] = newData)
+          newArray[arrayIndex] = newData;
+        }
+        return newArray;
+      }
+      if (fieldName) {
+        // Parent è un oggetto: aggiorna il campo
+        return { ...prev, [fieldName]: newData };
+      }
+      return newData;
+    });
+    setNestedModal(null);
   };
 
   const closeNestedModal = () => {
     setNestedModal(null);
   };
 
-  const renderValue = (value, key) => {
+  /**
+   * Renderizza il valore di un campo.
+   * @param value - il valore da renderizzare
+   * @param displayKey - etichetta di visualizzazione (es. "campo[0]")
+   * @param schemaKey - nome del campo per lookup nello schema (es. "campo"); se omesso, usa displayKey
+   * @param arrayIndex - indice dell'elemento nell'array parent (opzionale, solo per celle in array di oggetti)
+   */
+  const renderValue = (value, displayKey, schemaKey, arrayIndex) => {
+    const fieldName = schemaKey || displayKey;
+
     if (value === null || value === undefined) {
       return <span className="null-value">null</span>;
     }
@@ -59,9 +115,9 @@ function DataDetailModal({ isOpen, onClose, data, title, isEditing = false, onSa
       return (
         <button
           className="detail-link"
-          onClick={() => handleNestedClick(value, `${key} [${value.length} elementi]`)}
+          onClick={() => handleNestedClick(value, `${displayKey} [${value.length} elementi]`, fieldName, arrayIndex)}
         >
-          Array[{value.length}] 👁️
+          Array[{value.length}] 👁️ {isEditing ? '✏️' : ''}
         </button>
       );
     }
@@ -72,9 +128,9 @@ function DataDetailModal({ isOpen, onClose, data, title, isEditing = false, onSa
       return (
         <button
           className="detail-link"
-          onClick={() => handleNestedClick(value, `${key}: ${typeName}`)}
+          onClick={() => handleNestedClick(value, `${displayKey}: ${typeName}`, fieldName, arrayIndex)}
         >
-          {typeName} 👁️
+          {typeName} 👁️ {isEditing ? '✏️' : ''}
         </button>
       );
     }
@@ -155,7 +211,7 @@ function DataDetailModal({ isOpen, onClose, data, title, isEditing = false, onSa
               <tr key={index}>
                 <td className="array-index">{index}</td>
                 <td className="field-value">
-                  {typeof item === 'object' ? renderValue(item, `[${index}]`) : String(item)}
+                  {typeof item === 'object' ? renderValue(item, `[${index}]`, undefined, index) : String(item)}
                 </td>
               </tr>
             ))}
@@ -366,11 +422,11 @@ function DataDetailModal({ isOpen, onClose, data, title, isEditing = false, onSa
                       }
                     }
                     
-                    // Read-only mode
+                    // Read-only mode or complex types (array/object) in edit mode
                     return (
                       <td key={key} className="field-value">
                         {item && typeof item === 'object' 
-                          ? renderValue(item[key], `${key}[${index}]`)
+                          ? renderValue(item[key], `${key}[${index}]`, key, index)
                           : '-'}
                       </td>
                     );
@@ -459,13 +515,16 @@ function DataDetailModal({ isOpen, onClose, data, title, isEditing = false, onSa
         </div>
       </div>
 
-      {/* Nested modal */}
+      {/* Nested modal - STESSO codice ricorsivo con schema/isEditing/onSave propagati */}
       {nestedModal && (
         <DataDetailModal
           isOpen={true}
           onClose={closeNestedModal}
           data={nestedModal.data}
           title={nestedModal.title}
+          isEditing={isEditing}
+          onSave={handleNestedSave}
+          schema={nestedModal.schema}
         />
       )}
     </>
