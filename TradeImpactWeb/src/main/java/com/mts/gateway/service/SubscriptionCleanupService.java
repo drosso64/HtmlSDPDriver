@@ -28,6 +28,7 @@ public class SubscriptionCleanupService {
     
     private final SubscriptionRepository subscriptionRepository;
     private final EntityManager entityManager;
+    private final ActiveSubscriptionService activeSubscriptionService;
     
     /**
      * Clean up ALL data on application startup.
@@ -40,6 +41,10 @@ public class SubscriptionCleanupService {
         log.info("🧹 Cleaning up ALL data from previous sessions...");
         
         try {
+            // 0. Clear in-memory active subscriptions (stale subscription keys)
+            activeSubscriptionService.clearAll();
+            log.info("✅ Cleared in-memory active subscriptions");
+            
             // 1. Delete ALL subscriptions (regardless of status)
             long subscriptionCount = subscriptionRepository.count();
             if (subscriptionCount > 0) {

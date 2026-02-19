@@ -6,14 +6,38 @@ import './DataDetailModal.css';
  * @param {boolean} isEditing - If true, allows editing the data
  * @param {function} onSave - Callback when saving edited data
  */
-function DataDetailModal({ isOpen, onClose, data, title, isEditing = false, onSave }) {
+/**
+ * @param {object} schema - Schema nested (da ClassIntrospectionService).
+ *   Contiene .fields[] con la struttura dei campi.
+ *   Usato per:
+ *   - Mostrare campi in oggetti vuoti
+ *   - Creare righe vuote in array vuoti
+ */
+function DataDetailModal({ isOpen, onClose, data, title, isEditing = false, onSave, schema = null }) {
   const [nestedModal, setNestedModal] = useState(null);
   const [editedData, setEditedData] = useState(data);
 
   // Update editedData when data changes
+  // Se l'oggetto è vuoto ma lo schema ha i campi, inizializza con i defaults.
+  // Questo garantisce che i campi siano editabili fin dall'apertura.
   useEffect(() => {
-    setEditedData(data);
-  }, [data]);
+    if (data && typeof data === 'object' && !Array.isArray(data) && 
+        Object.keys(data).length === 0 && schema?.fields) {
+      // Oggetto vuoto + schema disponibile: crea defaults
+      const defaults = {};
+      schema.fields.forEach(f => {
+        if (f.jsonType === 'boolean') defaults[f.name] = false;
+        else if (f.jsonType === 'number') defaults[f.name] = 0;
+        else if (f.array) defaults[f.name] = [];
+        else if (f.nested) defaults[f.name] = {};
+        else defaults[f.name] = null;
+      });
+      console.log('📋 DataDetailModal: initialized empty object from schema with', Object.keys(defaults).length, 'fields');
+      setEditedData(defaults);
+    } else {
+      setEditedData(data);
+    }
+  }, [data, schema]);
 
   if (!isOpen) return null;
 
@@ -59,6 +83,11 @@ function DataDetailModal({ isOpen, onClose, data, title, isEditing = false, onSa
     return <span className="primitive-value">{String(value)}</span>;
   };
 
+  const handleObjectFieldChange = (key, value) => {
+    if (!isEditing) return;
+    setEditedData(prev => ({ ...prev, [key]: value }));
+  };
+
   const renderObjectDetails = (obj) => {
     const entries = Object.entries(obj).filter(([key]) => !key.startsWith('_'));
     
@@ -75,12 +104,39 @@ function DataDetailModal({ isOpen, onClose, data, title, isEditing = false, onSa
             {entries.map(([key, value]) => (
               <tr key={key}>
                 <td className="field-name">{key}</td>
-                <td className="field-value">{renderValue(value, key)}</td>
+                <td className="field-value">
+                  {isEditing && (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')
+                    ? renderEditableObjectField(key, value)
+                    : renderValue(value, key)}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+    );
+  };
+
+  const renderEditableObjectField = (key, value) => {
+    if (typeof value === 'boolean') {
+      return (
+        <label className="field-checkbox">
+          <input type="checkbox" checked={!!editedData[key]} 
+                 onChange={(e) => handleObjectFieldChange(key, e.target.checked)} />
+          <span>{editedData[key] ? 'true' : 'false'}</span>
+        </label>
+      );
+    }
+    if (typeof value === 'number') {
+      return (
+        <input type="number" value={editedData[key] ?? 0} className="cell-input"
+               onChange={(e) => handleObjectFieldChange(key, parseFloat(e.target.value) || 0)} />
+      );
+    }
+    // String or null
+    return (
+      <input type="text" value={editedData[key] ?? ''} className="cell-input"
+             onChange={(e) => handleObjectFieldChange(key, e.target.value)} />
     );
   };
 
@@ -117,25 +173,45 @@ function DataDetailModal({ isOpen, onClose, data, title, isEditing = false, onSa
     setEditedData(newArray);
   };
 
-  const handleAddRow = () => {
-    if (!isEditing || !Array.isArray(editedData) || editedData.length === 0) return;
-    
-    // Create a new row with same structure as first item, but with empty/default values
-    const firstItem = editedData[0];
+  /**
+   * Crea un oggetto vuoto dalla struttura dello schema o dal primo elemento esistente.
+   * Lo schema è la fonte di verità; il primo elemento è il fallback.
+   */
+  const createEmptyRow = () => {
     const newRow = {};
     
-    Object.keys(firstItem).forEach(key => {
-      const value = firstItem[key];
-      if (typeof value === 'boolean') {
-        newRow[key] = false;
-      } else if (typeof value === 'number') {
-        newRow[key] = 0;
-      } else if (typeof value === 'string') {
-        newRow[key] = '';
-      } else {
-        newRow[key] = null;
-      }
-    });
+    // PRIORITÀ 1: usa lo schema (reflection Java)
+    if (schema?.fields) {
+      schema.fields.forEach(f => {
+        if (f.jsonType === 'boolean') newRow[f.name] = false;
+        else if (f.jsonType === 'number') newRow[f.name] = 0;
+        else if (f.array) newRow[f.name] = [];
+        else if (f.nested) newRow[f.name] = {};
+        else newRow[f.name] = '';
+      });
+      return newRow;
+    }
+    
+    // PRIORITÀ 2: copia struttura dal primo elemento esistente
+    if (Array.isArray(editedData) && editedData.length > 0 && typeof editedData[0] === 'object') {
+      Object.keys(editedData[0]).forEach(key => {
+        const value = editedData[0][key];
+        if (typeof value === 'boolean') newRow[key] = false;
+        else if (typeof value === 'number') newRow[key] = 0;
+        else if (typeof value === 'string') newRow[key] = '';
+        else newRow[key] = null;
+      });
+      return newRow;
+    }
+    
+    return newRow;
+  };
+
+  const handleAddRow = () => {
+    if (!isEditing || !Array.isArray(editedData)) return;
+    
+    const newRow = createEmptyRow();
+    if (Object.keys(newRow).length === 0) return; // Nessuna struttura nota
     
     setEditedData([...editedData, newRow]);
   };
@@ -157,7 +233,19 @@ function DataDetailModal({ isOpen, onClose, data, title, isEditing = false, onSa
 
   const renderArrayOfObjects = (arr) => {
     if (arr.length === 0) {
-      return <div className="empty-array">Array vuoto</div>;
+      // Array vuoto: mostra solo il pulsante "Aggiungi" se in editing e lo schema è disponibile
+      return (
+        <div className="array-details">
+          <div className="empty-array">Array vuoto - {schema?.fields ? `${schema.fields.length} campi definiti nello schema` : 'nessuno schema disponibile'}</div>
+          {isEditing && schema?.fields && (
+            <div className="array-actions">
+              <button className="btn-add-row" onClick={handleAddRow}>
+                ➕ Aggiungi Riga
+              </button>
+            </div>
+          )}
+        </div>
+      );
     }
 
     console.log('🔍 Array to render:', arr);
@@ -324,7 +412,9 @@ function DataDetailModal({ isOpen, onClose, data, title, isEditing = false, onSa
     // Array
     if (Array.isArray(dataToRender)) {
       if (dataToRender.length === 0) {
-        return <div className="empty-array">Array vuoto</div>;
+        // Array vuoto: usa renderArrayOfObjects per mostrare il pulsante "Aggiungi"
+        // se lo schema è disponibile
+        return renderArrayOfObjects(dataToRender);
       }
 
       // Check if array of objects or scalars
@@ -336,6 +426,10 @@ function DataDetailModal({ isOpen, onClose, data, title, isEditing = false, onSa
 
     // Object
     if (typeof dataToRender === 'object') {
+      // Se l'oggetto è vuoto e non abbiamo schema, non c'è nulla da mostrare
+      if (Object.keys(dataToRender).length === 0) {
+        return <div className="empty-array">Oggetto vuoto{!schema?.fields ? ' - nessuno schema disponibile' : ''}</div>;
+      }
       return renderObjectDetails(dataToRender);
     }
 

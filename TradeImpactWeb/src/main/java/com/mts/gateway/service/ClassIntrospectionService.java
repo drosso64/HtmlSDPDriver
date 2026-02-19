@@ -271,7 +271,8 @@ public class ClassIntrospectionService {
                           !fieldType.getName().equals("java.util.Date");
         
         ClassSchema nestedSchema = null;
-        if (isNested && !isArray) {
+        if (isNested) {
+            // Introspect sia per oggetti nested sia per array di oggetti nested
             try {
                 nestedSchema = introspectClass(fieldType.getName());
             } catch (Exception e) {
@@ -344,7 +345,9 @@ public class ClassIntrospectionService {
                           !fieldType.getName().equals("java.util.Date");
         
         ClassSchema nestedSchema = null;
-        if (isNested && !isArray) {
+        if (isNested) {
+            // Introspect sia per oggetti nested sia per array di oggetti nested
+            // Così il frontend conosce la struttura degli elementi anche se l'array è vuoto
             try {
                 nestedSchema = introspectClass(fieldType.getName());
             } catch (Exception e) {

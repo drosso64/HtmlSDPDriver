@@ -31,6 +31,7 @@ public class AuthService {
     private final SDPConnectionPool connectionPool;
     private final SDPConfigProperties config;
     private final com.mts.gateway.classloader.SDPClassLoaderService classLoaderService;
+    private final ActiveSubscriptionService activeSubscriptionService;
     
     // Active sessions: token -> session info
     private final Map<String, SessionInfo> activeSessions = new ConcurrentHashMap<>();
@@ -207,6 +208,14 @@ public class AuthService {
             log.info("Clearing {} active session(s)", activeSessions.size());
             activeSessions.clear();
         }
+        
+        // CRITICAL: Clear in-memory subscriptions.
+        // connectionPool.shutdown() chiude le connessioni SDP, invalidando
+        // tutte le subscription key. Se non puliamo ActiveSubscriptionService,
+        // al prossimo subscribe il sistema crede che la subscription esista
+        // ma l'AP non manda più dati (subscription key stale).
+        activeSubscriptionService.clearAll();
+        log.info("Cleared all in-memory subscriptions");
         
         // Close all SDP connections to Access Points
         try {

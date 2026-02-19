@@ -182,10 +182,13 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
       const typeLabel = fieldType === 'array' 
         ? `Array[${Array.isArray(displayValue) ? displayValue.length : 0}]` 
         : (displayValue?._type || 'Object');
+      // Passa lo schema nested al modal: serve per creare righe vuote in array
+      // e mostrare campi in oggetti vuoti
+      const nestedSchema = fieldSchemaMap[fieldName]?.nestedSchema || null;
       return (
         <button
           className="field-structured-btn"
-          onClick={() => setStructuredDataModal({ data: displayValue, title: fieldName, fieldName })}
+          onClick={() => setStructuredDataModal({ data: displayValue, title: fieldName, fieldName, nestedSchema })}
           type="button"
         >
           {typeLabel} 👁️ {isEditing ? '✏️' : ''}
@@ -337,6 +340,7 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
           title={structuredDataModal.title}
           isEditing={isEditing}
           onSave={handleStructuredDataSave}
+          schema={structuredDataModal.nestedSchema}
         />
       )}
     </div>
