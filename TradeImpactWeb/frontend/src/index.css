@@ -4,6 +4,18 @@
   box-sizing: border-box;
 }
 
+/* Rimuove le frecce dai campi numerici (Chrome, Safari, Edge) */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Rimuove le frecce dai campi numerici (Firefox) */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
