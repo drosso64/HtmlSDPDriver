@@ -15,3 +15,47 @@
 .main-content {
   padding-top: 60px;
 }
+
+/* Schermata di attesa connessione WebSocket */
+.ws-connecting-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.ws-connecting-content {
+  text-align: center;
+  padding: 48px 64px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.10);
+}
+
+.ws-connecting-spinner {
+  width: 56px;
+  height: 56px;
+  border: 5px solid #e0e0e0;
+  border-top-color: #1976d2;
+  border-radius: 50%;
+  animation: ws-spin 0.9s linear infinite;
+  margin: 0 auto 24px;
+}
+
+@keyframes ws-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ws-connecting-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #212121;
+  margin: 0 0 8px;
+}
+
+.ws-connecting-subtitle {
+  font-size: 0.95rem;
+  color: #757575;
+  margin: 0;
+}

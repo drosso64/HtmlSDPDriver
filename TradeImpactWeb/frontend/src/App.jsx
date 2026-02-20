@@ -9,6 +9,7 @@ import StandaloneClassView from './components/StandaloneClassView'
 import QueryInterface from './components/QueryInterface'
 import Database from './components/Database'
 import Header from './components/Header'
+import './App.css'
 
 function AppContent({ isAuthenticated, user, onLogin, onLogout }) {
   const location = useLocation();
@@ -16,7 +17,28 @@ function AppContent({ isAuthenticated, user, onLogin, onLogout }) {
   const ws = useWebSocket(); // Access WebSocket context
   const isStandaloneView = location.pathname.startsWith('/class-view');
 
+  // Quando l'utente si autentica (anche al secondo login), riavvia la connessione WebSocket.
+  // connect() re-abilita internamente shouldReconnect=true prima di aprire il socket.
+  useEffect(() => {
+    if (isAuthenticated) {
+      ws.connect();
+    }
+  }, [isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
+
   console.log('🔍 AppContent render - pathname:', location.pathname, 'isStandalone:', isStandaloneView);
+
+  // Schermata di attesa: utente autenticato ma WebSocket non ancora connesso
+  if (isAuthenticated && !ws.isConnected) {
+    return (
+      <div className="ws-connecting-screen">
+        <div className="ws-connecting-content">
+          <div className="ws-connecting-spinner" />
+          <p className="ws-connecting-title">Connessione al mercato in corso&hellip;</p>
+          <p className="ws-connecting-subtitle">Attendere prego</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleLogoutWithRedirect = async () => {
     // Clear WebSocket state before logout
