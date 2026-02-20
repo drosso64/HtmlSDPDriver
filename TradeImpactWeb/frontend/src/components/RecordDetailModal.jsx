@@ -85,10 +85,15 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
       // quel valore; altrimenti usa il default ricorsivo dal tipo dello schema.
       const initialData = {};
       fields.forEach(fieldName => {
-        if (record[fieldName] !== undefined) {
-          initialData[fieldName] = record[fieldName];
+        const fieldSchema = fieldSchemaMap[fieldName];
+        const recordValue = record[fieldName];
+        // Per campi nested/array, usa buildDefault se il valore è null o undefined:
+        // il template crea questi campi a null, ma servono come oggetti/array strutturati
+        const isStructured = fieldSchema?.nested || fieldSchema?.array;
+        if (recordValue !== undefined && !(isStructured && recordValue === null)) {
+          initialData[fieldName] = recordValue;
         } else {
-          initialData[fieldName] = buildDefault(fieldSchemaMap[fieldName]);
+          initialData[fieldName] = buildDefault(fieldSchema);
         }
       });
       setEditedData(initialData);
