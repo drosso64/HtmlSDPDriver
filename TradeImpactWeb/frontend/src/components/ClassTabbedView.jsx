@@ -59,19 +59,26 @@ function ClassTabbedView({ data, user }) {
       return;
     }
 
+    // Se il tab corrente è ancora presente nelle classTabs non fare nulla.
+    // Questo evita che aggiornamenti WebSocket (che ricalcolano classTabs)
+    // resettino il tab attivo al primo.
+    if (activeTab && classTabs.some(tab => tab.classId === activeTab)) {
+      return;
+    }
+
     // Try to restore from session storage
     const savedTab = sessionStorage.getItem('activeClassTab');
     if (savedTab) {
       const tabExists = classTabs.find(tab => tab.classId === savedTab);
       if (tabExists) {
-        setActiveTab(savedTab);
+        setActiveTab(tabExists.classId);
         return;
       }
     }
 
     // Default to first tab
     setActiveTab(classTabs[0].classId);
-  }, [classTabs]);
+  }, [classTabs, activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Save active tab to session storage
   useEffect(() => {
