@@ -60,26 +60,35 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
 
   useEffect(() => {
     if (record && isOpen) {
+      // Costruisce il valore di default per un singolo campo dallo schema (ricorsivo)
+      const buildDefault = (fieldSchema) => {
+        if (!fieldSchema) return null;
+        if (fieldSchema.array) {
+          return []; // array → vuoto
+        }
+        if (fieldSchema.nested && fieldSchema.nestedSchema?.fields) {
+          // Oggetto nested → costruisce ricorsivamente con tutti i sotto-campi
+          const obj = {};
+          fieldSchema.nestedSchema.fields.forEach(subField => {
+            obj[subField.name] = buildDefault(subField);
+          });
+          return obj;
+        }
+        if (fieldSchema.jsonType === 'boolean') return false;
+        if (fieldSchema.jsonType === 'number') return 0;
+        return null;
+      };
+
       // Inizializza i valori del form.
       // I CAMPI sono definiti dallo schema (o dal record come fallback).
       // I VALORI vengono dal record: se il campo esiste nel record, usa
-      // quel valore; altrimenti usa il default dal tipo dello schema.
+      // quel valore; altrimenti usa il default ricorsivo dal tipo dello schema.
       const initialData = {};
       fields.forEach(fieldName => {
         if (record[fieldName] !== undefined) {
           initialData[fieldName] = record[fieldName];
         } else {
-          // Campo nello schema ma non nel record: usa default per tipo
-          const fieldSchema = fieldSchemaMap[fieldName];
-          if (fieldSchema) {
-            if (fieldSchema.array) initialData[fieldName] = [];
-            else if (fieldSchema.nested) initialData[fieldName] = {};
-            else if (fieldSchema.jsonType === 'boolean') initialData[fieldName] = false;
-            else if (fieldSchema.jsonType === 'number') initialData[fieldName] = 0;
-            else initialData[fieldName] = null;
-          } else {
-            initialData[fieldName] = null;
-          }
+          initialData[fieldName] = buildDefault(fieldSchemaMap[fieldName]);
         }
       });
       setEditedData(initialData);
