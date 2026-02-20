@@ -17,9 +17,10 @@ public class TransactionRequest {
     private String username;
     
     /**
-     * Class ID (e.g., "BV_MARKET_ORDER", "BV_IOI")
+     * Class ID numerico (e.g., 114809).
+     * Il backend fa lookup del className via ClassMetadataRepository.
      */
-    private String classId;
+    private Long classId;
     
     /**
      * Transaction action

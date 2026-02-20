@@ -174,7 +174,7 @@ public class SDPConnectionPool {
      * @throws IOException if no connection available
      */
     public SDPConnection getTransactionConnection() throws IOException {
-        return getConnection("txn");
+        return getConnection(ServiceType.TXN_INFO_PRIV.getName());
     }
     
     /**
@@ -185,7 +185,7 @@ public class SDPConnectionPool {
      * @throws IOException if no connection available
      */
     public SDPConnection getInfoConnection() throws IOException {
-        return getConnection("info");
+        return getConnection(ServiceType.INFO_BRT.getName());
     }
     
     /**
@@ -196,7 +196,7 @@ public class SDPConnectionPool {
      * @throws IOException if no connection available
      */
     public SDPConnection getQueryConnection() throws IOException {
-        return getConnection("query");
+        return getConnection(ServiceType.QUERY.getName());
     }
     
     /**

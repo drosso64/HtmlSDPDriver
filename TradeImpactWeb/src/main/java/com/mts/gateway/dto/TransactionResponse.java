@@ -3,10 +3,13 @@ package com.mts.gateway.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.Map;
+
 /**
  * Transaction Response DTO
  * 
  * Represents the result of a transaction execution.
+ * Include i dati della risposta del mercato (se presenti).
  */
 @Data
 @Builder
@@ -41,6 +44,23 @@ public class TransactionResponse {
      * Reference ID from the request (for tracking)
      */
     private String referenceId;
+    
+    /**
+     * Class ID della risposta del mercato (resClassId dalla SAPMonitoredActionRes).
+     * Se != null e != 0, responseData contiene i dati della classe.
+     */
+    private Long resClassId;
+    
+    /**
+     * Nome della classe di risposta (per visualizzazione frontend)
+     */
+    private String resClassName;
+    
+    /**
+     * Dati della risposta del mercato, serializzati come mappa campo→valore.
+     * Presente solo se resClassId != 0 nella SAPMonitoredActionRes.
+     */
+    private Map<String, Object> responseData;
     
     /**
      * Create a successful response

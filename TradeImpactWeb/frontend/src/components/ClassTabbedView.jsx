@@ -187,6 +187,7 @@ function ClassTabbedView({ data, user }) {
             data={activeTabData} 
             classId={activeTabObject.classId}
             className={activeTabObject.className}
+            user={user}
           />
         ) : (
           <div className="no-data-message">

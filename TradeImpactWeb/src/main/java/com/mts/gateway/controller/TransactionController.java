@@ -56,7 +56,7 @@ public class TransactionController {
                 );
             }
             
-            if (request.getClassId() == null || request.getClassId().isEmpty()) {
+            if (request.getClassId() == null) {
                 return ResponseEntity.badRequest().body(
                     TransactionResponse.error("Class ID is required")
                 );
@@ -77,11 +77,9 @@ public class TransactionController {
             // Execute transaction
             TransactionResponse response = transactionService.executeTransaction(request);
             
-            if (response.isSuccess()) {
-                return ResponseEntity.ok(response);
-            } else {
-                return ResponseEntity.status(500).body(response);
-            }
+            // Sempre 200: il rifiuto dal mercato non è un errore server,
+            // è una risposta business valida con success=false
+            return ResponseEntity.ok(response);
             
         } catch (IllegalArgumentException e) {
             log.error("Invalid transaction request", e);
@@ -115,13 +113,36 @@ public class TransactionController {
             request.getUsername(), request.getClassId(), request.getAction());
         
         try {
+            // Validate request
+            if (request.getUsername() == null || request.getUsername().isEmpty()) {
+                return ResponseEntity.badRequest().body(
+                    TransactionResponse.error("Username is required")
+                );
+            }
+            
+            if (request.getClassId() == null) {
+                return ResponseEntity.badRequest().body(
+                    TransactionResponse.error("Class ID is required")
+                );
+            }
+            
+            if (request.getAction() == null) {
+                return ResponseEntity.badRequest().body(
+                    TransactionResponse.error("Action is required")
+                );
+            }
+            
+            if (request.getData() == null || request.getData().isEmpty()) {
+                return ResponseEntity.badRequest().body(
+                    TransactionResponse.error("Transaction data is required")
+                );
+            }
+            
             TransactionResponse response = transactionService.executeMonitoredTransaction(request);
             
-            if (response.isSuccess()) {
-                return ResponseEntity.ok(response);
-            } else {
-                return ResponseEntity.status(500).body(response);
-            }
+            // Sempre 200: il rifiuto dal mercato non è un errore server,
+            // è una risposta business valida con success=false
+            return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             log.error("Failed to execute monitored transaction", e);
@@ -151,11 +172,9 @@ public class TransactionController {
         try {
             TransactionResponse response = transactionService.executeExtendedTransaction(request);
             
-            if (response.isSuccess()) {
-                return ResponseEntity.ok(response);
-            } else {
-                return ResponseEntity.status(500).body(response);
-            }
+            // Sempre 200: il rifiuto dal mercato non è un errore server,
+            // è una risposta business valida con success=false
+            return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             log.error("Failed to execute extended transaction", e);

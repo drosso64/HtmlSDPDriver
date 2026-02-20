@@ -1,4 +1,4 @@
-import { useState, useMemo, Fragment, useEffect } from 'react';
+import { useState, useMemo, Fragment, useEffect, useCallback } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -10,6 +10,7 @@ import {
 import DataDetailModal from './DataDetailModal';
 import RecordDetailModal from './RecordDetailModal';
 import ExcelLikeFilter from './ExcelLikeFilter';
+import { transactions } from '../services/api';
 import axios from 'axios';
 import './DynamicDataGrid.css';
 
@@ -55,7 +56,7 @@ import './DynamicDataGrid.css';
  * @see ExcelLikeFilter.jsx - Componente filtro dropdown
  * @see RecordDetailModal.jsx - Modal per modifica record
  */
-function DynamicDataGrid({ data, classId, className }) {
+function DynamicDataGrid({ data, classId, className, user }) {
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
   const [columnVisibility, setColumnVisibility] = useState({});
@@ -65,6 +66,11 @@ function DynamicDataGrid({ data, classId, className }) {
   const [recordDetailModal, setRecordDetailModal] = useState(null);
   const [showAddRecordModal, setShowAddRecordModal] = useState(false);
   const [classSchema, setClassSchema] = useState(null);
+  
+  // Transaction state
+  const [transactionLoading, setTransactionLoading] = useState(false);
+  const [transactionError, setTransactionError] = useState(null);
+  const [transactionResponseModal, setTransactionResponseModal] = useState(null);
 
   console.log('🔷 DynamicDataGrid render - dati ricevuti:', data?.length || 0, 'records', 'classId:', classId, 'className:', className);
 
@@ -222,21 +228,78 @@ function DynamicDataGrid({ data, classId, className }) {
     return <span>{str}</span>;
   };
 
-  const handleRecordAction = (action, recordData) => {
-    console.log(`🔧 Action requested: ${action}`, recordData);
-    // TODO: Implementare chiamata SDP per ADD, RWT o DEL
-    // Per ora solo log
-    if (action === 'ADD') {
-      console.log('➕ ADD (Insert) - New record:', recordData);
-      // TODO: Inviare transazione ADD via SDP
-    } else if (action === 'RWT') {
-      console.log('📝 RWT (Update) - Data to send:', recordData);
-      // TODO: Inviare transazione RWT via SDP
-    } else if (action === 'DEL') {
-      console.log('🗑️ DEL (Delete) - Record to delete:', recordData);
-      // TODO: Inviare transazione DEL via SDP
+  /**
+   * Campi metadata da escludere dal payload della transazione.
+   * Sono campi aggiunti dal frontend/gateway, non fanno parte del messaggio SMP.
+   */
+  const METADATA_KEYS = useMemo(() => new Set([
+    '_rowId', '_type', 'timestamp', 'className', 'classId', 'hashKey'
+  ]), []);
+
+  const handleRecordAction = useCallback(async (action, recordData) => {
+    console.log(`🔧 Transaction: ${action}`, recordData);
+    
+    if (!user?.username) {
+      setTransactionError({ message: 'Username non disponibile. Effettuare il login.' });
+      return;
     }
-  };
+    
+    if (!classId) {
+      setTransactionError({ message: 'ClassId non disponibile.' });
+      return;
+    }
+    
+    // Filtra i campi metadata dal payload
+    const filteredData = {};
+    Object.entries(recordData).forEach(([key, value]) => {
+      if (!METADATA_KEYS.has(key)) {
+        filteredData[key] = value;
+      }
+    });
+    
+    setTransactionLoading(true);
+    setTransactionError(null);
+    
+    try {
+      const response = await transactions.submitMonitored({
+        classId: classId,
+        action: action,
+        data: filteredData,
+        username: user.username,
+      });
+      
+      const result = response.data;
+      console.log('✅ Transaction result:', result);
+      
+      if (!result.success) {
+        // Errore ritornato dal mercato (result != TransOK)
+        const errorInfo = {
+          message: `Transazione ${action} fallita: ${result.message}`,
+          errorCode: result.errorCode,
+          transactionId: result.transactionId,
+        };
+        
+        // Se resClassId != 0, mostra anche i dati di risposta nell'errore
+        if (result.resClassId && result.resClassId !== 0 && result.responseData) {
+          errorInfo.responseData = result.responseData;
+          errorInfo.resClassName = result.resClassName;
+        }
+        
+        setTransactionError(errorInfo);
+      } else {
+        // Successo: chiudi i modali (i dati aggiornati arriveranno via WebSocket)
+        setRecordDetailModal(null);
+        setShowAddRecordModal(false);
+      }
+      
+    } catch (err) {
+      console.error('❌ Transaction failed:', err);
+      const errMsg = err.response?.data?.message || err.message || 'Errore sconosciuto';
+      setTransactionError({ message: `Errore nella transazione ${action}: ${errMsg}` });
+    } finally {
+      setTransactionLoading(false);
+    }
+  }, [classId, user, METADATA_KEYS]);
 
   // Create empty record template for ADD operation (memoized)
   const emptyRecordTemplate = useMemo(() => {
@@ -600,6 +663,65 @@ function DynamicDataGrid({ data, classId, className }) {
         isNewRecord={true}
         schema={classSchema}
       />
+
+      {/* Transaction Loading Overlay */}
+      {transactionLoading && (
+        <div className="transaction-overlay">
+          <div className="transaction-loading">
+            <div className="spinner"></div>
+            <span>Invio transazione in corso...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Transaction Error Popup */}
+      {transactionError && (
+        <div className="transaction-overlay" onClick={() => setTransactionError(null)}>
+          <div className="transaction-error-popup" onClick={(e) => e.stopPropagation()}>
+            <div className="transaction-error-header">
+              <span>⚠️ Errore Transazione</span>
+              <button 
+                className="transaction-close-btn"
+                onClick={() => setTransactionError(null)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="transaction-error-body">
+              <p className="transaction-error-message">{transactionError.message}</p>
+              {transactionError.errorCode != null && (
+                <p className="transaction-error-code">
+                  Codice errore: <strong>{transactionError.errorCode}</strong>
+                </p>
+              )}
+              {transactionError.transactionId != null && (
+                <p className="transaction-error-txnid">
+                  Transaction ID: <strong>{transactionError.transactionId}</strong>
+                </p>
+              )}
+              {/* Se la risposta contiene dati dal mercato (resClassId != 0) */}
+              {transactionError.responseData && (
+                <div className="transaction-response-data">
+                  <p className="transaction-response-label">
+                    Dati risposta mercato{transactionError.resClassName ? ` (${transactionError.resClassName})` : ''}:
+                  </p>
+                  <pre className="transaction-response-json">
+                    {JSON.stringify(transactionError.responseData, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+            <div className="transaction-error-footer">
+              <button 
+                className="transaction-ok-btn"
+                onClick={() => setTransactionError(null)}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

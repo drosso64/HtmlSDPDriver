@@ -1,6 +1,9 @@
 package com.mts.gateway.sdp;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mts.gateway.dto.TransactionResponse;
+import com.mts.gateway.util.SMPMessageSerializer;
 import com.mtsmarkets.io.xdr.ULong;
 import com.mtsmarkets.sdp.client.*;
 import com.mtsmarkets.sdp.common.SDPException;
@@ -55,6 +58,7 @@ public class SDPConnection implements Closeable {
     // Transaction response tracking
     private final Map<Long, CompletableFuture<TransactionResponse>> pendingTransactions = new ConcurrentHashMap<>();
     private final AtomicLong transactionIdCounter = new AtomicLong(1);
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     
     private Instant lastActivity;
     private Instant createdAt;
@@ -418,9 +422,15 @@ public class SDPConnection implements Closeable {
             // Set transaction ID as ULong array [high, low]
             request.setTransId(new ULong[] { new ULong(0), new ULong(txnId) });
             request.setAction(SAPActionType.valueOf(action));
+            // Identificativo univoco della transazione
+            request.setReqId(new ULong(txnId));
+            // ClassId dalla classe SMP (ogni sottoclasse ha il suo CLASS_ID statico)
+            request.setClassId(new ULong(smpMessage.getSMPClassId()));
+            // Richiediamo sempre i dati nella risposta
+            request.setDataInResponse(1);
             
-            log.info("Sending monitored transaction: id={} action={} class={}", 
-                txnId, action, smpMessage.getClass().getSimpleName());
+            log.info("Sending monitored transaction: id={} action={} class={} classId={}", 
+                txnId, action, smpMessage.getClass().getSimpleName(), smpMessage.getSMPClassId());
             
             transactionChannel.monitoredAction(request);
             touchActivity();
@@ -1092,22 +1102,42 @@ public class SDPConnection implements Closeable {
         @Override
         public void onTransactionMonitored(SAPMonitoredActionRes res) {
             long txnId = res.getTransId()[1].getValue();
-            log.info("Monitored transaction response: txnId={} result={} inTime={}", 
-                txnId, res.getResult(), res.getInTimeStamp().getValue());
+            long resClassId = res.getResClassId().getValue();
+            
+            log.info("Monitored transaction response: txnId={} result={} reasonCode={} resClassId={} inTime={}", 
+                txnId, res.getResult(), res.getReasonCode().getValue(), resClassId, 
+                res.getInTimeStamp().getValue());
             
             CompletableFuture<TransactionResponse> future = 
                 pendingTransactions.remove(txnId);
             
             if (future != null) {
-                TransactionResponse response = TransactionResponse.builder()
+                TransactionResponse.TransactionResponseBuilder builder = TransactionResponse.builder()
                     .success(res.getResult() == SAPMonitoredActionRes.Result.TransOK)
                     .message(res.getResult().name())
                     .transactionId(txnId)
                     .monitoringId(res.getInTimeStamp().getValue())
                     .errorCode((int) res.getReasonCode().getValue())
-                    .build();
+                    .resClassId(resClassId);
                 
-                future.complete(response);
+                // Se resClassId != 0, la risposta contiene dati dal mercato nel campo smpMessage
+                if (resClassId != 0) {
+                    SMPMessage resSmpMessage = res.getSmpMessage();
+                    if (resSmpMessage != null) {
+                        try {
+                            String json = SMPMessageSerializer.toJson(resSmpMessage);
+                            Map<String, Object> responseData = objectMapper.readValue(
+                                json, new TypeReference<Map<String, Object>>() {});
+                            builder.responseData(responseData);
+                            log.info("Transaction response contains market data: resClassId={} type={}", 
+                                resClassId, resSmpMessage.getClass().getSimpleName());
+                        } catch (Exception e) {
+                            log.error("Failed to serialize transaction response data", e);
+                        }
+                    }
+                }
+                
+                future.complete(builder.build());
             }
         }
         

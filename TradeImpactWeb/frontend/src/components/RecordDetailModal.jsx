@@ -95,32 +95,26 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
 
   const handleADD = () => {
     // ADD = INSERT (nuovo record)
-    // Invia tutti i campi editati al backend
-    // TODO: Implementare chiamata REST a TransactionController
+    // Il modale resta aperto fino a completamento transazione
     if (onAction) {
       onAction('ADD', editedData);
     }
-    onClose();
   };
 
   const handleRWT = () => {
     // RWT = REWRITE (update record esistente)
-    // Invia solo campi modificati (editedData contiene tutti i campi)
-    // TODO: Implementare chiamata REST a TransactionController
+    // Il modale resta aperto fino a completamento transazione
     if (onAction) {
       onAction('RWT', editedData);
     }
-    onClose();
   };
 
   const handleDEL = () => {
     // DEL = DELETE (elimina record)
-    // Invia chiave business per identificare record da eliminare
-    // TODO: Implementare chiamata REST a TransactionController
+    // Il modale resta aperto fino a completamento transazione
     if (onAction) {
       onAction('DEL', record);
     }
-    onClose();
   };
 
   const handleStructuredDataSave = (newData) => {

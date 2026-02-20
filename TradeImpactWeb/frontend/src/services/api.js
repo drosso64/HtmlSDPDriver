@@ -101,7 +101,19 @@ export const transactions = {
     api.get(`/transactions/types/${type}/fields`),
   
   submit: (type, data) => 
-    api.post('/transactions', { type, data })
+    api.post('/transactions', { type, data }),
+
+  /**
+   * Invia una transazione monitored (SAPMonitoredActionReq)
+   * @param {Object} params
+   * @param {number} params.classId - ID numerico della classe SMP
+   * @param {string} params.action - ADD | RWT | DEL | KILL
+   * @param {Object} params.data - Campi del messaggio SMP
+   * @param {string} params.username - Username dell'utente
+   * @returns {Promise} TransactionResponse
+   */
+  submitMonitored: ({ classId, action, data, username }) =>
+    api.post('/transactions/monitored', { classId, action, data, username })
 };
 
 // Query
