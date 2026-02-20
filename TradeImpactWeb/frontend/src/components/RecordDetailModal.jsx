@@ -25,6 +25,9 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
   const [editedData, setEditedData] = useState({});
   const [isEditing, setIsEditing] = useState(false);
   const [structuredDataModal, setStructuredDataModal] = useState(null);
+  const [jsonMode, setJsonMode] = useState(false);
+  const [jsonText, setJsonText] = useState('');
+  const [jsonError, setJsonError] = useState(null);
 
   // Lista campi definita dallo SCHEMA (unica fonte di verità per la struttura)
   // Se lo schema non è disponibile, fallback su Object.keys(record)
@@ -81,6 +84,8 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
       });
       setEditedData(initialData);
       setIsEditing(isNewRecord);
+      setJsonMode(false);
+      setJsonError(null);
     }
   }, [record, isOpen, isNewRecord, fields, fieldSchemaMap]);
 
@@ -93,19 +98,56 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
     }));
   };
 
+  // Toggle tra vista Form e vista JSON
+  const handleToggleJsonMode = (toJson) => {
+    if (toJson) {
+      // Form → JSON: serializza editedData corrente
+      setJsonText(JSON.stringify(editedData, null, 2));
+      setJsonError(null);
+      setJsonMode(true);
+    } else {
+      // JSON → Form: prova a parsare; rimane in JSON se invalido
+      try {
+        const parsed = JSON.parse(jsonText);
+        setEditedData(prev => ({ ...prev, ...parsed }));
+        setJsonError(null);
+        setJsonMode(false);
+      } catch (e) {
+        setJsonError(`JSON non valido: ${e.message}`);
+      }
+    }
+  };
+
+  // Risolve i dati da inviare: se in modalità JSON, parsa jsonText;
+  // altrimenti usa editedData corrente. Ritorna null se il JSON è invalido.
+  const resolveEditedData = () => {
+    if (jsonMode) {
+      try {
+        return JSON.parse(jsonText);
+      } catch (e) {
+        setJsonError(`JSON non valido: ${e.message}`);
+        return null;
+      }
+    }
+    return editedData;
+  };
+
   const handleADD = () => {
-    // ADD = INSERT (nuovo record)
     // Il modale resta aperto fino a completamento transazione
+    const data = resolveEditedData();
+    if (data === null) return; // JSON invalido: blocca e mostra errore
     if (onAction) {
-      onAction('ADD', editedData);
+      onAction('ADD', data);
     }
   };
 
   const handleRWT = () => {
     // RWT = REWRITE (update record esistente)
     // Il modale resta aperto fino a completamento transazione
+    const data = resolveEditedData();
+    if (data === null) return; // JSON invalido: blocca e mostra errore
     if (onAction) {
-      onAction('RWT', editedData);
+      onAction('RWT', data);
     }
   };
 
@@ -235,6 +277,22 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
       <div className="modal-content record-detail-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>{isNewRecord ? 'Nuovo Record' : 'Dettagli Record'} - {record.className}</h3>
+          {isEditing && (
+            <div className="json-mode-toggle">
+              <button
+                className={`json-toggle-btn${!jsonMode ? ' active' : ''}`}
+                onClick={() => handleToggleJsonMode(false)}
+                type="button"
+                title="Visualizzazione campi"
+              >Form</button>
+              <button
+                className={`json-toggle-btn${jsonMode ? ' active' : ''}`}
+                onClick={() => handleToggleJsonMode(true)}
+                type="button"
+                title="Visualizzazione / modifica JSON"
+              >JSON</button>
+            </div>
+          )}
           <button className="modal-close" onClick={onClose} aria-label="Chiudi">
             ✕
           </button>
@@ -268,16 +326,28 @@ function RecordDetailModal({ isOpen, onClose, record, onAction, isNewRecord = fa
             </div>
           )}
 
-          <div className="fields-list">
-            {fields.map(fieldName => (
-              <div key={fieldName} className="field-row">
-                <label className="field-label">{fieldName}</label>
-                <div className="field-value">
-                  {renderFieldInput(fieldName, editedData[fieldName])}
+          {jsonMode ? (
+            <div className="json-editor-container">
+              <textarea
+                className="json-editor-textarea"
+                value={jsonText}
+                onChange={(e) => { setJsonText(e.target.value); setJsonError(null); }}
+                spellCheck={false}
+              />
+              {jsonError && <div className="json-error-banner">{jsonError}</div>}
+            </div>
+          ) : (
+            <div className="fields-list">
+              {fields.map(fieldName => (
+                <div key={fieldName} className="field-row">
+                  <label className="field-label">{fieldName}</label>
+                  <div className="field-value">
+                    {renderFieldInput(fieldName, editedData[fieldName])}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="modal-footer">
