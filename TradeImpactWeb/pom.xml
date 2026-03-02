@@ -86,26 +86,26 @@
         <dependency>
             <groupId>com.mtsmarkets</groupId>
             <artifactId>sdp-protocol</artifactId>
-            <version>5.0.0</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/libs/sdp-protocol-5.0.0-jar-with-dependencies.jar</systemPath>
+            <version>5.0.1</version>
+            <!--scope>system</scope>
+            <systemPath>${project.basedir}/libs/sdp-protocol-5.0.1-jar-with-dependencies.jar</systemPath-->
         </dependency>
         
         <dependency>
             <groupId>com.mtsmarkets</groupId>
             <artifactId>sdp-client</artifactId>
-            <version>5.0.0</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/libs/sdp-client-5.0.0.jar</systemPath>
+            <version>5.0.1</version>
+            <!--scope>system</scope>
+            <systemPath>${project.basedir}/libs/sdp-client-5.0.1.jar</systemPath-->
         </dependency>
         
-        <dependency>
+        <!--dependency>
             <groupId>com.mtsmarkets</groupId>
             <artifactId>sdp-sample</artifactId>
-            <version>5.0.0</version>
+            <version>5.0.1</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/libs/sdp-sample-5.0.0.jar</systemPath>
-        </dependency>
+            <systemPath>${project.basedir}/libs/sdp-sample-5.0.1.jar</systemPath>
+        </dependency-->
 
         <!-- Testing -->
         <dependency>
