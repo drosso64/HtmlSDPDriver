@@ -19,16 +19,16 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:h2:file:/app/data/marketdata
       
       # SDP Configuration (override con .env o qui)
-      - SDP_HOST=${SDP_HOST:-localhost}
-      - SDP_PORT=${SDP_PORT:-9999}
-      - SDP_USERNAME=${SDP_USERNAME:-user}
-      - SDP_PASSWORD=${SDP_PASSWORD:-pass}
+      - PLATFORM_ID=${PLATFORM_ID:-1}
+      - IPSP_HOST=${IPSP_HOST:-}
+      - IPSP_PORT=${IPSP_PORT:-8800}
+      - IPSP_SSL=${IPSP_SSL:-true}
       
       # Data Retention
-      - DATA_RETENTION_DAYS=${DATA_RETENTION_DAYS:-30}
+      - DATABASE_CLEANUP_RETENTION_DAYS=${DATABASE_CLEANUP_RETENTION_DAYS:-30}
       
       # Logging
-      - LOGGING_LEVEL_COM_TRADEIMPACT=${LOG_LEVEL:-INFO}
+      - LOGGING_LEVEL_COM_MTS_GATEWAY=${LOG_LEVEL:-INFO}
     
     volumes:
       # Database H2 rimane nel container (NON persistito su host)

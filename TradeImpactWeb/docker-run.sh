@@ -40,10 +40,10 @@ docker run -d \
   -p 8080:8080 \
   -v "$(pwd)/data:/app/data" \
   -v "$(pwd)/logs:/app/logs" \
-  -e SDP_HOST="${SDP_HOST:-localhost}" \
-  -e SDP_PORT="${SDP_PORT:-9999}" \
-  -e SDP_USERNAME="${SDP_USERNAME:-user}" \
-  -e SDP_PASSWORD="${SDP_PASSWORD:-pass}" \
+    -e PLATFORM_ID="${PLATFORM_ID:-1}" \
+    -e IPSP_HOST="${IPSP_HOST:-}" \
+    -e IPSP_PORT="${IPSP_PORT:-8800}" \
+    -e IPSP_SSL="${IPSP_SSL:-true}" \
   --restart unless-stopped \
   $IMAGE_NAME
 

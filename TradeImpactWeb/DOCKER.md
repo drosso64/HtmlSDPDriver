@@ -42,11 +42,11 @@ nano .env
 
 ```properties
 # .env
-SDP_HOST=your-sdp-server
-SDP_PORT=9999
-SDP_USERNAME=user
-SDP_PASSWORD=pass
-DATA_RETENTION_DAYS=30
+PLATFORM_ID=1
+IPSP_HOST=your-ipsp-server
+IPSP_PORT=8800
+IPSP_SSL=true
+DATABASE_CLEANUP_RETENTION_DAYS=30
 ```
 
 ### 3. Avvia Applicazione
@@ -74,8 +74,10 @@ docker run -d \
   --name tradeimpact-web \
   -p 8080:8080 \
   -v $(pwd)/data:/app/data \
-  -e SDP_HOST=localhost \
-  -e SDP_PORT=9999 \
+  -e PLATFORM_ID=1 \
+  -e IPSP_HOST=ipsp.example.com \
+  -e IPSP_PORT=8800 \
+  -e IPSP_SSL=true \
   tradeimpact-web:latest
 ```
 
@@ -84,8 +86,7 @@ docker run -d \
 Apri browser: **http://localhost:8080**
 
 Login di default:
-- Username: `admin`
-- Password: `admin`
+- Nessuna credenziale hardcoded: autenticazione gestita via `/api/auth/login` con credenziali fornite in UI.
 
 ## Architettura Docker
 
@@ -187,13 +188,17 @@ docker-compose up -d --scale tradeimpact-web=3
 ```yaml
 # docker-compose.yml
 volumes:
-  - ./data:/app/data      # Database H2
   - ./logs:/app/logs      # Log files
 ```
 
 **Directory create automaticamente:**
-- `./data/` - Database H2 (marketdata.mv.db)
 - `./logs/` - Log applicazione
+
+Per persistere il DB H2 anche su host, decommentare:
+
+```yaml
+- ./data:/app/data
+```
 
 **Backup database:**
 ```bash
@@ -222,11 +227,11 @@ docker-compose up -d
 | Variable | Default | Descrizione |
 |----------|---------|-------------|
 | `SERVER_PORT` | `8080` | Porta applicazione |
-| `SDP_HOST` | `localhost` | Hostname SDP server |
-| `SDP_PORT` | `9999` | Porta SDP server |
-| `SDP_USERNAME` | `user` | Username SDP |
-| `SDP_PASSWORD` | `pass` | Password SDP |
-| `DATA_RETENTION_DAYS` | `30` | Retention giorni |
+| `PLATFORM_ID` | `1` | ID piattaforma/mercato |
+| `IPSP_HOST` | `` | Hostname IPSP |
+| `IPSP_PORT` | `8800` | Porta IPSP |
+| `IPSP_SSL` | `true` | Abilita SSL IPSP |
+| `DATABASE_CLEANUP_RETENTION_DAYS` | `30` | Retention giorni cleanup |
 | `JAVA_OPTS` | `-Xmx512m -Xms256m` | JVM options |
 | `LOG_LEVEL` | `INFO` | Log level |
 
@@ -234,13 +239,13 @@ docker-compose up -d
 
 **Metodo 1: File .env**
 ```bash
-echo "SDP_HOST=production-server" > .env
+echo "IPSP_HOST=production-server" > .env
 docker-compose up -d
 ```
 
 **Metodo 2: Variabili inline**
 ```bash
-SDP_HOST=prod docker-compose up -d
+IPSP_HOST=prod docker-compose up -d
 ```
 
 **Metodo 3: docker-compose.override.yml**
@@ -250,7 +255,7 @@ version: '3.8'
 services:
   tradeimpact-web:
     environment:
-      - SDP_HOST=production-server
+      - IPSP_HOST=production-server
       - JAVA_OPTS=-Xmx2g -Xms1g
 ```
 
@@ -342,11 +347,11 @@ spec:
         ports:
         - containerPort: 8080
         env:
-        - name: SDP_HOST
+        - name: IPSP_HOST
           valueFrom:
             configMapKeyRef:
               name: tradeimpact-config
-              key: sdp.host
+              key: ipsp.host
         volumeMounts:
         - name: data
           mountPath: /app/data

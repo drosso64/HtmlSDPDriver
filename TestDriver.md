@@ -45,8 +45,8 @@ Questo documento descrive l'implementazione completa di un sistema di deployment
                             ▼
 ┌──────────────────────────────────────────────────────────────┐
 │ 6. Filter and Initialize Market Connections                  │
-│    └─> pool.initializeMarketConnections(response)           │
-│    └─> Filters ONLY configured market-id                    │
+│    └─> pool.initializeMarketConnections(response, user, pwd)│
+│    └─> Filters ONLY configured platform-id                  │
 │    └─> Creates connections: INFO_BRT, TXN_INFO_PRIV, QUERY  │
 └──────────────────────────────────────────────────────────────┘
                             │
@@ -62,33 +62,37 @@ Questo documento descrive l'implementazione completa di un sistema di deployment
 #### application.yml
 ```yaml
 sdp:
-  ipsp-host: ${SDP_IPSP_HOST:localhost}
-  ipsp-port: ${SDP_IPSP_PORT:8800}
+  platform-id: ${PLATFORM_ID:1}
   market-classes-jar: ${SDP_CLASSES_JAR:./libs/sdp-bvf.jar}
-  market-id: ${MARKET_ID:1}
   market-factory-class: ${MARKET_FACTORY_CLASS:}
+  classes-csv: ${SDP_CLASSES_CSV:./config/classes.csv}
+  additional-jars: ${SDP_ADDITIONAL_JARS:}
   
-  pool:
-    info-service-min: 1
-    info-service-max: 5
-    query-service-min: 1
-    query-service-max: 5
-    txn-service-min: 1
-    txn-service-max: 5
-    connection-timeout: 30000
-    lazy-initialization: true
+  ipsp:
+    default-host: ${IPSP_HOST:}
+    default-port: ${IPSP_PORT:8800}
+    use-ssl: ${IPSP_SSL:true}
+  
+  connection-pool:
+    min-size: 1
+    max-size: 1
+    max-connections-per-service: 5
+    connection-timeout: 30s
+    keep-alive-interval: 30s
+    reconnect-delay: 5s
 ```
 
 #### SDPConfigProperties.java
 ```java
 @ConfigurationProperties(prefix = "sdp")
 public class SDPConfigProperties {
-    private String ipspHost = "localhost";
-    private Integer ipspPort = 8800;
+  private Integer platformId;
     private String marketClassesJar;
-    private Integer marketId = 1;
     private String marketFactoryClass;
-    private PoolConfig pool = new PoolConfig();
+  private String classesCsv;
+  private String additionalJars;
+  private ConnectionPool connectionPool = new ConnectionPool();
+  private Ipsp ipsp = new Ipsp();
     
     // ... getters/setters
 }
@@ -103,19 +107,21 @@ Implementazione del meccanismo asincrono per richiedere gli indirizzi dei serviz
 ```java
 public class SDPConnection {
     private CompletableFuture<SAPAddressServiceResExt> addressServiceFuture;
+
+  public void prepareAddressServiceFuture() {
+    addressServiceFuture = new CompletableFuture<>();
+  }
     
-    public CompletableFuture<SAPAddressServiceResExt> requestAddressService() {
-        addressServiceFuture = new CompletableFuture<>();
-        
+  public SAPAddressServiceResExt requestAddressService() throws Exception {
         try {
             SAPAddressServiceReqExt request = new SAPAddressServiceReqExt();
             channel.send(request);
             logger.info("Sent AddressServiceRequest to IPSP");
             
-            return addressServiceFuture.orTimeout(30, TimeUnit.SECONDS);
+      return addressServiceFuture.orTimeout(30, TimeUnit.SECONDS).get();
         } catch (Exception e) {
             addressServiceFuture.completeExceptionally(e);
-            return addressServiceFuture;
+      throw e;
         }
     }
     
@@ -147,13 +153,13 @@ public class SDPConnectionPool {
     public void initializeMarketConnections(SAPAddressServiceResExt addressServiceResponse) 
             throws Exception {
         
-        logger.info("Filtering address service response for market ID: {}", 
-            config.getMarketId());
+        logger.info("Filtering address service response for platform ID: {}", 
+          config.getPlatformId());
         
         // Find the target market platform
         SAPAddressServiceResExt.Platform targetPlatform = null;
         for (SAPAddressServiceResExt.Platform platform : addressServiceResponse.getPlatforms()) {
-            if (platform.platformID == config.getMarketId()) {
+            if (platform.platformID == config.getPlatformId()) {
                 targetPlatform = platform;
                 logger.info("Found target market {}: {}", 
                     platform.platformID, platform.platformName);
@@ -163,7 +169,7 @@ public class SDPConnectionPool {
         
         if (targetPlatform == null) {
             throw new IllegalStateException(
-                "Market ID " + config.getMarketId() + " not found in IPSP response");
+                "Platform ID " + config.getPlatformId() + " not found in IPSP response");
         }
         
         // Create connections only for this market
@@ -178,7 +184,7 @@ public class SDPConnectionPool {
             }
         }
         
-        logger.info("Market connections initialized for market {}", config.getMarketId());
+        logger.info("Market connections initialized for platform {}", config.getPlatformId());
     }
     
     private String mapSAPServiceTypeToPoolService(SAPServiceType serviceType) {
@@ -329,18 +335,19 @@ public class AuthService {
             
             // Request address service from IPSP
             logger.info("Requesting address service from IPSP");
-            CompletableFuture<SAPAddressServiceResExt> addressFuture = 
-                ipspConnection.requestAddressService();
+            SAPAddressServiceResExt addressResponse = ipspConnection.requestAddressService();
             
-            SAPAddressServiceResExt addressResponse = addressFuture.get(30, TimeUnit.SECONDS);
-            
-            // Initialize connections ONLY for configured market
-            connectionPool.initializeMarketConnections(addressResponse);
+            // Initialize connections ONLY for configured platform
+            connectionPool.initializeMarketConnections(
+              addressResponse,
+              request.getUsername(),
+              request.getPassword()
+            );
             
             // Close temporary IPSP connection
             ipspConnection.disconnect();
             
-            return new LoginResponse(true, "Login successful for market " + config.getMarketId());
+            return new LoginResponse(true, "Login successful for platform " + config.getPlatformId());
             
         } catch (Exception e) {
             logger.error("Login failed", e);
@@ -358,17 +365,31 @@ Script `docker-build.sh`:
 
 ```bash
 #!/bin/bash
-docker build -t tradeimpact-web:latest .
+docker build \
+  --build-arg HTTP_PROXY="${HTTP_PROXY}" \
+  --build-arg HTTPS_PROXY="${HTTPS_PROXY}" \
+  --build-arg NO_PROXY="${NO_PROXY}" \
+  -t tradeimpact-web:latest .
 ```
 
 ### Dockerfile
 
 ```dockerfile
-FROM eclipse-temurin:17-jdk-alpine
+# Multi-stage build (frontend + backend + runtime)
+FROM node:18-alpine AS frontend-builder
+... (build frontend in dist)
+
+FROM maven:3.9-eclipse-temurin-17 AS backend-builder
+... (build backend jar + include frontend dist)
+
+FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-COPY target/*.jar app.jar
+COPY --from=backend-builder /app/target/*.jar /app/app.jar
+COPY libs/ /app/libs/
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
 ```
 
 ### Deploy Container Specifico per Mercato
@@ -376,7 +397,7 @@ ENTRYPOINT ["java", "-jar", "/app/app.jar"]
 #### BVF Market (ID: 8)
 ```bash
 docker run -d --name bvf-market8 \
-  -e MARKET_ID=8 \
+  -e PLATFORM_ID=8 \
   -e SDP_CLASSES_JAR=/app/libs/sdp-bvf.jar \
   -v /home/OAD/drosso/git/HtmlDriver/TradeImpactWeb/libs/sdp-bvf-BV14.1_20260128.1.jar:/app/libs/sdp-bvf.jar \
   -p 8081:8080 \
@@ -388,7 +409,7 @@ docker run -d --name bvf-market8 \
 #### CMF Market (ID: 2) - Esempio
 ```bash
 docker run -d --name cmf-market2 \
-  -e MARKET_ID=2 \
+  -e PLATFORM_ID=2 \
   -e SDP_CLASSES_JAR=/app/libs/sdp-cmf.jar \
   -v /path/assoluto/to/sdp-cmf.jar:/app/libs/sdp-cmf.jar \
   -p 8082:8080 \
@@ -445,6 +466,17 @@ Log di un container avviato con successo:
 ```
 
 ## Testing del Sistema
+
+### Endpoint reali da verificare
+
+- Login: `POST /api/auth/login`
+- WebSocket: `/ws/marketdata` (token in query string `?token=...`)
+- Transazioni: `POST /api/transactions`, `POST /api/transactions/monitored`, `POST /api/transactions/extended`
+
+### Nota importante sul flusso dati UI
+
+- Le griglie frontend sono alimentate dal flusso WebSocket e mantenute in memoria (`WebSocketContext`) con semantica UPSERT per `hashKey`.
+- Il database H2 è usato per persistenza/storico lato backend, non come datasource diretto delle griglie.
 
 ### 1. Login con Filtraggio Mercato
 
@@ -539,6 +571,14 @@ Dovresti vedere solo connessioni ai servizi del mercato 8 (INFO_BRT, TXN_INFO_PR
 3. Sottoscrivere ai dati
 4. Verificare che i dati ricevuti siano solo del mercato 8
 
+### 4. Test Transazioni ADD/RWT/DEL
+
+1. Aprire una tab classe e aprire il `RecordDetailModal` su un record esistente (`📋`) oppure creare un nuovo record (`➕`).
+2. Eseguire azione `ADD`, `RWT` o `DEL`.
+3. Verificare nel tab Network la chiamata a `POST /api/transactions/monitored`.
+4. Verificare nei log backend la ricezione in `TransactionController` e l'esecuzione in `TransactionService`.
+5. Verificare esito risposta (`success=true/false`) mostrato nel frontend.
+
 ## Problemi Risolti Durante lo Sviluppo
 
 ### 1. MarketFactory Non Instanziabile
@@ -623,11 +663,12 @@ docker run -v /home/OAD/drosso/git/HtmlDriver/TradeImpactWeb/libs/sdp-bvf.jar:/a
 
 | Variabile | Default | Descrizione |
 |-----------|---------|-------------|
-| `MARKET_ID` | 1 | ID numerico del mercato (es. 8 per BVF) |
+| `PLATFORM_ID` | 1 | ID numerico del platform/market (es. 8 per BVF) |
 | `SDP_CLASSES_JAR` | ./libs/sdp-bvf.jar | Path del JAR contenente le classi del mercato |
 | `MARKET_FACTORY_CLASS` | (auto-detect) | Nome completo della classe MarketFactory (opzionale) |
-| `SDP_IPSP_HOST` | localhost | Hostname o IP dell'IPSP (può essere sovrascritto nel form di login) |
-| `SDP_IPSP_PORT` | 8800 | Porta dell'IPSP (può essere sovrascritta nel form di login) |
+| `IPSP_HOST` | (vuoto) | Hostname o IP dell'IPSP (può essere sovrascritto nel form di login) |
+| `IPSP_PORT` | 8800 | Porta dell'IPSP (può essere sovrascritta nel form di login) |
+| `IPSP_SSL` | true | Abilita SSL per connessione IPSP |
 
 ### Opzioni di Pool
 
@@ -635,15 +676,13 @@ Configurabili in `application.yml`:
 
 ```yaml
 sdp:
-  pool:
-    info-service-min: 1     # Connessioni minime per INFO_BRT
-    info-service-max: 5     # Connessioni massime per INFO_BRT
-    query-service-min: 1    # Connessioni minime per QUERY
-    query-service-max: 5    # Connessioni massime per QUERY
-    txn-service-min: 1      # Connessioni minime per TXN_INFO_PRIV
-    txn-service-max: 5      # Connessioni massime per TXN_INFO_PRIV
-    connection-timeout: 30000    # Timeout in ms
-    lazy-initialization: true    # Connessioni create solo dopo login
+  connection-pool:
+    min-size: 1
+    max-size: 1
+    max-connections-per-service: 5
+    connection-timeout: 30s
+    keep-alive-interval: 30s
+    reconnect-delay: 5s
 ```
 
 ## Best Practices
@@ -655,21 +694,21 @@ Eseguire container separati per ogni mercato:
 ```bash
 # BVF (Market 8)
 docker run -d --name bvf-market8 -p 8081:8080 \
-  -e MARKET_ID=8 \
+  -e PLATFORM_ID=8 \
   -e SDP_CLASSES_JAR=/app/libs/sdp-bvf.jar \
   -v /path/to/sdp-bvf.jar:/app/libs/sdp-bvf.jar \
   tradeimpact-web:latest
 
 # CMF (Market 2)
 docker run -d --name cmf-market2 -p 8082:8080 \
-  -e MARKET_ID=2 \
+  -e PLATFORM_ID=2 \
   -e SDP_CLASSES_JAR=/app/libs/sdp-cmf.jar \
   -v /path/to/sdp-cmf.jar:/app/libs/sdp-cmf.jar \
   tradeimpact-web:latest
 
 # MTS (Market 3)
 docker run -d --name mts-market3 -p 8083:8080 \
-  -e MARKET_ID=3 \
+  -e PLATFORM_ID=3 \
   -e SDP_CLASSES_JAR=/app/libs/sdp-mts.jar \
   -v /path/to/sdp-mts.jar:/app/libs/sdp-mts.jar \
   tradeimpact-web:latest
@@ -731,6 +770,12 @@ docker exec bvf-market8 ls -la /app/libs/
 docker exec bvf-market8 env | grep -E 'MARKET|SDP'
 ```
 
+oppure:
+
+```bash
+docker exec bvf-market8 env | grep -E 'PLATFORM|IPSP|SDP'
+```
+
 ### MarketFactory Non Trovato
 
 **Sintomo**:
@@ -761,12 +806,12 @@ Failed to connect to IPSP
 
 **Sintomo**:
 ```
-Market ID 8 not found in IPSP response
+Platform ID 8 not found in IPSP response
 ```
 
 **Cause**:
 1. L'utente non ha permessi per quel mercato
-2. Il market-id configurato è errato
+2. Il platform-id configurato è errato
 3. L'IPSP non restituisce quel mercato
 
 **Verifica**: Controllare i log per vedere quali mercati l'IPSP restituisce:
@@ -780,26 +825,26 @@ Platform/Market ID: 2, Name: MTS
 
 ### Configurazione
 - [application.yml](TradeImpactWeb/src/main/resources/application.yml#L42-L50)
-- [SDPConfigProperties.java](TradeImpactWeb/src/main/java/com/mtsmarkets/tradeimpact/config/SDPConfigProperties.java)
+- [SDPConfigProperties.java](TradeImpactWeb/src/main/java/com/mts/gateway/config/SDPConfigProperties.java)
 
 ### Core SDP
-- [SDPConnection.java](TradeImpactWeb/src/main/java/com/mtsmarkets/tradeimpact/sdp/SDPConnection.java)
+- [SDPConnection.java](TradeImpactWeb/src/main/java/com/mts/gateway/sdp/SDPConnection.java)
   - Aggiunto `requestAddressService()` con `CompletableFuture`
   - Aggiunto `onAddressService()` per gestire la risposta
   - Aggiunti `isConnected()` e `isLoggedIn()` pubblici
 
-- [SDPConnectionPool.java](TradeImpactWeb/src/main/java/com/mtsmarkets/tradeimpact/config/SDPConnectionPool.java)
+- [SDPConnectionPool.java](TradeImpactWeb/src/main/java/com/mts/gateway/sdp/SDPConnectionPool.java)
   - Aggiunto `initializeMarketConnections(SAPAddressServiceResExt)`
   - Aggiunto `mapSAPServiceTypeToPoolService()`
   - Aggiunto `createConnectionToMarket()`
 
-- [SDPClassLoaderService.java](TradeImpactWeb/src/main/java/com/mtsmarkets/tradeimpact/config/SDPClassLoaderService.java)
+- [SDPClassLoaderService.java](TradeImpactWeb/src/main/java/com/mts/gateway/classloader/SDPClassLoaderService.java)
   - Modificato `createMarketFactory()` per supportare auto-detection
   - Aggiunto `findMarketFactoryImplementation()` con scan del JAR
   - Aggiunto `getMarketFactory()` pubblico per dependency injection
 
 ### Services
-- [AuthService.java](TradeImpactWeb/src/main/java/com/mtsmarkets/tradeimpact/service/AuthService.java)
+- [AuthService.java](TradeImpactWeb/src/main/java/com/mts/gateway/service/AuthService.java)
   - Modificato costruttore per iniettare `SDPClassLoaderService` invece di `MarketFactory`
   - Aggiornato `login()` per ottenere `MarketFactory` dinamicamente
   - Implementato flusso: connessione temporanea IPSP → richiesta indirizzi → filtraggio mercato → inizializzazione connessioni
@@ -808,21 +853,28 @@ Platform/Market ID: 2, Name: MTS
 - [Dockerfile](TradeImpactWeb/Dockerfile)
 - [docker-build.sh](TradeImpactWeb/docker-build.sh)
 
+### Transazioni
+- [TransactionController.java](TradeImpactWeb/src/main/java/com/mts/gateway/controller/TransactionController.java)
+- [TransactionService.java](TradeImpactWeb/src/main/java/com/mts/gateway/service/TransactionService.java)
+- [DynamicDataGrid.jsx](TradeImpactWeb/frontend/src/components/DynamicDataGrid.jsx)
+- [api.js](TradeImpactWeb/frontend/src/services/api.js)
+
 ## Stato Attuale
 
 ### ✅ Implementato e Testato
 
-- [x] Configurazione market-id in application.yml
+- [x] Configurazione platform-id in application.yml
 - [x] Meccanismo asincrono per Address Service Request
 - [x] Filtraggio mercato in SDPConnectionPool
 - [x] Auto-detection MarketFactory da JAR
 - [x] Flusso di login con connessione temporanea IPSP
 - [x] Build Docker dell'immagine
-- [x] Deploy container con market-id=8 (BVF)
+- [x] Deploy container con platform-id=8 (BVF)
 - [x] Startup applicazione senza errori
 - [x] MarketFactory correttamente rilevato: `BVF_Factory`
 - [x] Pool inizializzato in lazy mode
 - [x] Tomcat in esecuzione su porta 8080 (interna) / 8081 (esterna)
+- [x] Endpoint transazioni REST operativi (`/api/transactions`, `/api/transactions/monitored`, `/api/transactions/extended`)
 
 ### ⏳ Pending User Testing
 

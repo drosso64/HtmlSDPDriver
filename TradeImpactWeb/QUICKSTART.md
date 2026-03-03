@@ -83,10 +83,10 @@ nano .env
 ```
 
 ```bash
-SDP_HOST=your-server
-SDP_PORT=9999
-SDP_USERNAME=user
-SDP_PASSWORD=pass
+PLATFORM_ID=1
+IPSP_HOST=your-ipsp-server
+IPSP_PORT=8800
+IPSP_SSL=true
 ```
 
 Poi restart:
@@ -143,15 +143,20 @@ Stage 3: runtime (JRE 17 Alpine)
 
 ## Persistenza Dati
 
-### Volumi Automatici
+### Volumi
 
 ```yaml
 volumes:
-  - ./data:/app/data    # Database H2
   - ./logs:/app/logs    # Log files
 ```
 
-Directory create automaticamente al primo avvio.
+Per persistere il database H2 anche su host, decommentare in `docker-compose.yml`:
+
+```yaml
+- ./data:/app/data
+```
+
+Directory create automaticamente al primo avvio (`logs`, ed eventualmente `data` se montata).
 
 ### Backup
 

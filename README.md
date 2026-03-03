@@ -4,7 +4,7 @@ Gateway web per visualizzazione e gestione dati market in tempo reale via protoc
 
 **Stato attuale (marzo 2026):**
 - I dati visualizzati nelle griglie sono mantenuti in memoria (sia backend che frontend). Le griglie NON leggono direttamente dal database H2, ma dal contesto WebSocket/in-memory.
-- Le funzioni di inserimento/modifica/cancellazione record (ADD/RWT/DEL) sono presenti solo lato frontend e loggano su console; la trasmissione reale via SDP non è ancora implementata.
+- Le funzioni di inserimento/modifica/cancellazione record (ADD/RWT/DEL) sono operative: il frontend invia richieste REST al backend (`TransactionController`), che esegue la transazione via SDP e restituisce l’esito.
 - Tutte le modifiche recenti (gestione enum, null/default, UX WebSocket, JSON modal, persistenza tab) sono implementate e documentate in ARCHITECTURE.md.
 
 ## 🎯 Scegli la Tua Guida
@@ -113,7 +113,7 @@ HtmlDriver/
 | Backend | Spring Boot | 3.3 |
 | Frontend | React | 18 |
 | Table Library | TanStack Table | 8.11.0 |
-| Database | H2 (in-memory) | - |
+| Database | H2 file-based locale | - |
 | Build | Maven + npm | - |
 | Container | Docker | Multi-stage |
 | Protocol | SDP (MTS) | Proprietario |
@@ -129,9 +129,9 @@ HtmlDriver/
    - Stato attuale: nessun limite implementato; tutti i messaggi sono mantenuti in memoria.
    - Dettagli: [`MAINTENANCE.md#scenario-5`](MAINTENANCE.md#scenario-5-risolvere-memory-leak-allmessages-cresce-allinfinito)
 
-2. **Transazioni Non Implementate**
-   - ADD/RWT/DEL loggano solo console
-   - Stato attuale: nessuna trasmissione reale via SDP
+2. **Transazioni Operative (attenzioni)**
+   - ADD/RWT/DEL sono operative via REST → `TransactionController` → SDP
+   - Monitorare handling errori business (`success=false`) e timeout di risposta mercato
    - Dettagli: [`MAINTENANCE.md#scenario-4`](MAINTENANCE.md#scenario-4-implementare-transazioni-addrwtdel)
 
 3. **Database Schema Generico**
@@ -142,7 +142,7 @@ HtmlDriver/
 ### 🎯 Prossime Priorità
 
 1. 🔴 **CRITICO:** Ring buffer per allMessages (previene crash)
-2. 🟠 **IMPORTANTE:** Implementare transazioni SDP (ADD/RWT/DEL)
+2. 🟠 **IMPORTANTE:** Rafforzare test end-to-end e gestione errori transazioni SDP (ADD/RWT/DEL)
 3. 🟡 **MEDIO:** Schema DB per classe con UPSERT
 4. 🟢 **NICE-TO-HAVE:** Combo/select per campi enum
 

@@ -12,7 +12,7 @@ Applicazione web per la visualizzazione e gestione di dati di mercato in tempo r
 **Stack Tecnologico:**
 - Backend: Spring Boot 3.3 + Java 17
 - Frontend: React 18 + TanStack Table v8
-- Database: H2 (in-memory)
+- Database: H2 file-based locale (dentro container/workdir)
 - Comunicazione real-time: WebSocket
 - Build: Maven + Docker multi-stage
 
@@ -59,13 +59,13 @@ Applicazione web per la visualizzazione e gestione di dati di mercato in tempo r
 
 **Lato Backend:**
 1. Utente invia username/password a `/api/auth/login`
-2. `AuthController` valida credenziali (attualmente mock)
-3. Ritorna JWT token e informazioni utente
+2. `AuthController` valida input credenziali e inizializza connessioni SDP verso la piattaforma configurata
+3. Ritorna token di sessione (UUID) e informazioni utente
 
 **Lato Frontend:**
 1. `Login.jsx` raccoglie credenziali
 2. `App.jsx` gestisce stato autenticazione
-3. Token salvato in `localStorage` (condiviso tra tab browser)
+3. Token di sessione salvato in `localStorage` (condiviso tra tab browser)
 4. Header visualizzato solo per utenti autenticati
 
 ### 2. Connessione WebSocket
@@ -74,21 +74,17 @@ Applicazione web per la visualizzazione e gestione di dati di mercato in tempo r
 ```javascript
 // WebSocketContext.jsx
 useEffect(() => {
-  const wsUrl = 'ws://localhost:8080/ws/market-data';
+    const token = localStorage.getItem('authToken');
+    const wsUrl = token
+        ? `ws://localhost:8081/ws/marketdata?token=${encodeURIComponent(token)}`
+        : 'ws://localhost:8081/ws/marketdata';
   const socket = new WebSocket(wsUrl);
-  
-  socket.onopen = () => {
-    // Invia autenticazione
-    socket.send(JSON.stringify({ 
-      type: 'AUTH', 
-      token: localStorage.getItem('token') 
-    }));
-  };
   
   socket.onmessage = (event) => {
     const message = JSON.parse(event.data);
-    // Aggiunge a allMessages array
-    setAllMessages(prev => [...prev, message]);
+        // UPSERT su struttura in-memory per classId/hashKey
+        // (evita duplicati su update dello stesso record)
+        upsertAllMessages(message);
   };
 }, []);
 ```
@@ -341,23 +337,16 @@ function RecordDetailModal({ record, onAction, isNewRecord }) {
 }
 ```
 
-**Backend - Invio Transazioni (DA IMPLEMENTARE):**
+**Backend - Invio Transazioni (Implementato):**
 
 ```java
-// TransactionController.java (futuro)
-@PostMapping("/transaction/add")
-public void addRecord(@RequestBody AddRequest request) {
-    // 1. Ottiene connessione SDP per transazioni
-    SDPConnection txnConn = sdpPool.getConnection(ServiceType.TXN);
-    
-    // 2. Crea oggetto SDP dalla richiesta JSON
-    Object sdpObject = SMPMessageDeserializer.fromJson(
-        request.getClassId(), 
-        request.getData()
-    );
-    
-    // 3. Invia via SDP
-    txnConn.send(sdpObject);
+// TransactionController.java
+@PostMapping("/api/transactions/monitored")
+public ResponseEntity<TransactionResponse> executeMonitoredTransaction(
+        @RequestBody TransactionRequest request) {
+    // 1. Validazione request
+    // 2. Delega a TransactionService
+    // 3. Esecuzione transazione SDP e ritorno esito (success true/false)
 }
 ```
 
@@ -462,9 +451,9 @@ Frontend renderizza colonne nello stesso ordine visibile nel codice sorgente.
 ## Debug e Troubleshooting
 
 ### WebSocket Non Si Connette
-1. Verifica URL: `ws://localhost:8080/ws/market-data`
+1. Verifica URL: `ws://localhost:8081/ws/marketdata` (host) / `ws://<container>:8080/ws/marketdata` (interno)
 2. Controlla CORS in `WebSocketConfig.java`
-3. Verifica token in localStorage
+3. Verifica token `authToken` in localStorage e query string `?token=...`
 4. Il frontend mostra uno spinner di attesa durante la connessione WebSocket (UX migliorata).
 
 ### Colonne Disordinate
@@ -493,9 +482,9 @@ Frontend renderizza colonne nello stesso ordine visibile nel codice sorgente.
 5. La gestione dei default/null è ora robusta: tutti i campi, inclusi quelli annidati, sono inizializzati con valori di default sia lato backend che frontend (modale JSON).
 
 ### Aggiungere Nuovo Tipo Transazione
-1. Estendere `TransactionController` (non ancora implementato)
-2. Implementare `SMPMessageDeserializer` (inverso del serializer, non ancora presente)
-3. Aggiungere bottone in `RecordDetailModal` (già presente, ma solo log su console)
+1. Estendere `TransactionController` con nuovo endpoint/azione
+2. Estendere `TransactionService` per mapping campi e invio SDP del nuovo caso
+3. Aggiornare UI (`RecordDetailModal`/`DynamicDataGrid`) se serve una nuova UX specifica
 
 ### Supportare Più Database
 1. Sostituire H2 con PostgreSQL/MySQL

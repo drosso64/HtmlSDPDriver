@@ -179,7 +179,6 @@ L'ordine delle colonne nel browser **seguirà automaticamente** l'ordine dei fie
 **Stato attuale:**
 - I bottoni ADD/RWT/DEL nel modal inviano una richiesta REST reale al backend (TransactionController), che esegue la transazione secondo protocollo SDP e restituisce l’esito al frontend.
 - Il deserializer custom per la ricostruzione oggetto SDP può essere ancora in evoluzione, ma la catena end-to-end è operativa.
-- Il controller e il deserializer non sono ancora implementati.
 
 ---
 

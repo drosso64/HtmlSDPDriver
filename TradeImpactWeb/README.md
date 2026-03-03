@@ -5,44 +5,39 @@ Applicazione web completa (frontend React + backend Spring Boot) per la gestione
 ## 🚀 Quick Start
 
 **Deployment Docker** (consigliato - nessuna installazione locale richiesta):
-
+GET  /api/classes/{classId}       # Dettagli classe
+GET  /api/classes/{classId}/schema # Schema classe
+POST /api/classes/subscribe       # Subscribe multiplo
+POST /api/classes/unsubscribe     # Unsubscribe multiplo
+POST /api/classes/reload          # Reload CSV class metadata
 ```bash
 # Build immagine (include frontend + backend)
 ./docker-build.sh
 
-# Avvia applicazione
-docker-compose up -d
-
+POST   /api/subscriptions                        # Crea subscription
+GET    /api/subscriptions/user/{username}        # Lista sottoscrizioni utente
+GET    /api/subscriptions/user/{username}/active # Sottoscrizioni attive utente
+DELETE /api/subscriptions/{username}/{classId}   # Disiscrivi utente da classe
+GET    /api/subscriptions/class/{classId}/data   # Dati recenti classe
+DELETE /api/subscriptions/class/{classId}/data   # Pulisce dati classe
+POST   /api/subscriptions/cleanup                # Cleanup manuale
+GET    /api/subscriptions/database/stats         # Statistiche DB subscriptions
 # Accedi: http://localhost:8080
 ```
-
-📖 Vedi **[QUICKSTART.md](QUICKSTART.md)** per guida rapida o **[DOCKER.md](DOCKER.md)** per documentazione completa.
-
-## Stack Tecnologico
-
-### Backend
 - **Spring Boot 3.2.2** - Framework applicativo
 - **Java 17** - Runtime
-- **H2 Database** - Persistenza locale (file-mode)
-- **SDP Protocol 5.0** - Comunicazione mercato
-- **WebSocket** - Real-time data streaming
+POST /api/transactions            # Esegue transazione standard
+POST /api/transactions/monitored  # Esegue transazione monitored
+POST /api/transactions/extended   # Esegue transazione extended
+```
 
-### Frontend
-- **React 18.2** - UI framework
-- **Vite 5.0** - Build tool
-- **React Router 6.20** - Routing
-- **Axios** - HTTP client
-- **WebSocket API** - Real-time updates
-
-### Deployment
-- **Docker Multi-stage** - Build ottimizzato
-- **Podman Compatible** - Rootless containers
-- **Single JAR** - Backend + Frontend integrati
-
-## Architettura
-
-L'applicazione è completamente **agnostica rispetto alle classi di mercato** grazie a:
-
+### Database Management
+```
+GET    /api/database/stats                    # Statistiche DB aggregate
+GET    /api/database/marketdata?classId=...   # Browse dati con paginazione
+GET    /api/database/classes                  # Classi disponibili in DB
+DELETE /api/database/marketdata/all           # Delete all + unsubscribe all
+DELETE /api/database/marketdata/class/{classId} # Delete classe + unsubscribe classe
 - **Dynamic ClassLoader**: Carica JAR di classi SMP a runtime senza dipendenze compile-time
 - **Reflection-based Introspection**: Analizza strutture delle classi dinamicamente
 - **Generic Serialization**: Converte JSON ↔ XDR senza conoscere le classi specifiche
@@ -241,65 +236,65 @@ npm run dev
 ```
 POST /api/auth/login              # Login
 POST /api/auth/logout             # Logout
+GET  /api/auth/session            # Verifica sessione
 ```
 
-### Classes
+### Classes & Metadata
 ```
 GET  /api/classes                 # Lista classi disponibili
-GET  /api/classes/{name}          # Dettagli classe
+GET  /api/classes/{classId}       # Dettagli classe
+GET  /api/classes/{classId}/schema # Schema classe
+POST /api/classes/subscribe       # Subscribe multiplo
+POST /api/classes/unsubscribe     # Unsubscribe multiplo
+POST /api/classes/reload          # Reload CSV class metadata
+
+GET  /api/metadata/{classId}
+GET  /api/metadata/{classId}/schema
+GET  /api/metadata/by-name/{className}
+GET  /api/metadata/by-name/{className}/schema
+GET  /api/metadata/search?keyword=DEAL
+POST /api/metadata/refresh
 ```
 
 ### Subscriptions
 ```
-GET    /api/subscriptions               # Lista sottoscrizioni attive
-POST   /api/subscriptions/{className}   # Sottoscrivi classe
-DELETE /api/subscriptions/{className}   # Disiscrivi classe
-```
-
-### Market Data
-```
-GET /api/market-data/{className}           # Ultimi dati
-GET /api/market-data/{className}/history   # Storico
+POST   /api/subscriptions                        # Crea subscription
+GET    /api/subscriptions/user/{username}        # Lista sottoscrizioni utente
+GET    /api/subscriptions/user/{username}/active # Sottoscrizioni attive utente
+DELETE /api/subscriptions/{username}/{classId}   # Disiscrivi utente da classe
+GET    /api/subscriptions/class/{classId}/data   # Dati recenti classe
+DELETE /api/subscriptions/class/{classId}/data   # Pulisce dati classe
+POST   /api/subscriptions/cleanup                # Cleanup manuale
+GET    /api/subscriptions/database/stats         # Statistiche DB subscriptions
 ```
 
 ### Transactions
 ```
-GET  /api/transactions/types                  # Tipi transazione
-GET  /api/transactions/types/{type}/fields    # Campi per tipo
-POST /api/transactions                        # Invia transazione
+POST /api/transactions            # Esegue transazione standard
+POST /api/transactions/monitored  # Esegue transazione monitored
+POST /api/transactions/extended   # Esegue transazione extended
 ```
 
-### Query
+### Database Management
 ```
-POST /api/query                   # Esegui query con filtri
-```
-
-### Dashboard
-```
-GET /api/dashboard/stats          # Statistiche overview
-```
-
-### Cleanup
-```
-GET  /api/cleanup/stats           # Statistiche database
-PUT  /api/cleanup/retention       # Aggiorna retention
-POST /api/cleanup/execute         # Esegui cleanup
+GET    /api/database/stats                       # Statistiche DB aggregate
+GET    /api/database/marketdata?classId=...      # Browse dati con paginazione
+GET    /api/database/classes                     # Classi presenti in DB
+DELETE /api/database/marketdata/all              # Delete all + unsubscribe all
+DELETE /api/database/marketdata/class/{classId}  # Delete classe + unsubscribe classe
 ```
 
 ## WebSocket
 
-**Endpoint:** `ws://localhost:8080/ws/market-data`
+**Endpoint:** `ws://localhost:8080/ws/marketdata`
 
 **Message Types:**
 ```javascript
-// Schema update
-{ "type": "schema", "columns": [...] }
+// Handshake
+{ "type": "connected", "message": "..." }
 
-// Data update
-{ "type": "data", "data": {...} }
-
-// Snapshot
-{ "type": "snapshot", "data": [...] }
+// Market data update
+{ "type": "marketData", "classId": 12345, "className": "BV_...", "hashKey": 123456789, "data": {...}, "timestamp": 1730000000000 }
 ```
 
 ## Configurazione
@@ -312,10 +307,11 @@ sdp:
   auto-reload: true
   
   ipsp:
-    host: ipsp.tradeimpact.example.com
-    port: 7000
+    default-host: ${IPSP_HOST:ipsp.tradeimpact.example.com}
+    default-port: ${IPSP_PORT:8800}
+    use-ssl: ${IPSP_SSL:true}
     username: gateway_user
-    password: ${SDP_PASSWORD}
+    password: ${IPSP_PASSWORD}
   
   connection-pool:
     min-size: 2
@@ -347,8 +343,15 @@ java -jar target/tradeimpact-web-gateway-1.0.0-SNAPSHOT.jar \
 GET  /api/classes                    # Lista tutte le classi disponibili
 GET  /api/classes/{classId}          # Dettagli classe
 GET  /api/classes/{classId}/schema   # Schema completo con campi
-GET  /api/classes/search?keyword=DEAL  # Cerca classi
-POST /api/classes/refresh            # Aggiorna cache metadata
+POST /api/classes/reload             # Reload CSV metadata classi
+
+# Endpoint metadata aggiuntivi
+GET  /api/metadata/{classId}
+GET  /api/metadata/{classId}/schema
+GET  /api/metadata/by-name/{className}
+GET  /api/metadata/by-name/{className}/schema
+GET  /api/metadata/search?keyword=DEAL
+POST /api/metadata/refresh
 ```
 
 ### Subscriptions
