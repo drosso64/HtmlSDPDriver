@@ -17,17 +17,22 @@ SDPConnection.java (riceve messaggi)
         ↓
 SMPMessageSerializer.java (converte a JSON)
         ↓
-MarketDataWebSocketHandler.java (broadcast)
+    MarketDataWebSocketHandler.java (broadcast)
         ↓
-WebSocket (ws://localhost:8080/ws/marketdata)
+    WebSocket (ws://localhost:8080/ws/marketdata)
         ↓
-WebSocketContext.jsx (React Context)
+    WebSocketContext.jsx (React Context)
         ↓
-ClassTabbedView.jsx (crea tab per classe)
+    ClassTabbedView.jsx (crea tab per classe)
         ↓
-DynamicDataGrid.jsx (renderizza tabella)
+    DynamicDataGrid.jsx (renderizza tabella)
         ↓
-BROWSER (utente finale)
+    BROWSER (utente finale)
+
+    **Stato attuale (marzo 2026):**
+    - I dati visualizzati nelle griglie sono mantenuti in memoria (sia backend che frontend). Le griglie NON leggono direttamente dal database H2, ma dal contesto WebSocket/in-memory.
+    - Le funzioni di inserimento/modifica/cancellazione record (ADD/RWT/DEL) sono presenti solo lato frontend e loggano su console; la trasmissione reale via SDP non è ancora implementata.
+    - Tutte le modifiche recenti (gestione enum, null/default, UX WebSocket, JSON modal, persistenza tab) sono implementate e documentate in ARCHITECTURE.md.
 ```
 
 ### Domanda: "Perché le colonne appaiono in un certo ordine?"
@@ -169,63 +174,12 @@ L'ordine delle colonne nel browser **seguirà automaticamente** l'ordine dei fie
 
 ### Scenario 4: Implementare transazioni ADD/RWT/DEL
 
-**Domanda:** I bottoni ADD/RWT/DEL nel modal loggano solo console. Come li implemento?
+**Domanda:** I bottoni ADD/RWT/DEL nel modal eseguono davvero la transazione?
 
-**Risposta:** ✅ Crea `TransactionController.java`:
-
-```java
-@RestController
-@RequestMapping("/api/transactions")
-public class TransactionController {
-    
-    @Autowired
-    private SDPConnectionPool sdpPool;
-    
-    @PostMapping("/add")
-    public ResponseEntity<?> addRecord(@RequestBody AddRequest request) {
-        try {
-            // 1. Ottieni connessione per transazioni
-            SDPConnection conn = sdpPool.getConnection(ServiceType.TXN);
-            
-            // 2. Ricostruisci oggetto SDP da JSON (TODO: implementare deserializer)
-            // Object sdpObject = SMPMessageDeserializer.fromJson(request);
-            
-            // 3. Invia tramite SDP
-            // conn.send(sdpObject);
-            
-            return ResponseEntity.ok("Record added successfully");
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Error: " + e.getMessage());
-        }
-    }
-    
-    // Stesso pattern per /rwt e /del
-}
-```
-
-**Frontend** (RecordDetailModal.jsx):
-```javascript
-const handleADD = async () => {
-    const response = await fetch('/api/transactions/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            classId: record.classId,
-            className: record.className,
-            data: editedData
-        })
-    });
-    
-    if (response.ok) {
-        console.log('✅ Record added successfully');
-        onClose();
-    } else {
-        console.error('❌ Error adding record');
-    }
-};
-```
-
-**TODO Critico:** Implementare `SMPMessageDeserializer` (inverso di serializer).
+**Stato attuale:**
+- I bottoni ADD/RWT/DEL nel modal inviano una richiesta REST reale al backend (TransactionController), che esegue la transazione secondo protocollo SDP e restituisce l’esito al frontend.
+- Il deserializer custom per la ricostruzione oggetto SDP può essere ancora in evoluzione, ma la catena end-to-end è operativa.
+- Il controller e il deserializer non sono ancora implementati.
 
 ---
 
@@ -235,31 +189,9 @@ const handleADD = async () => {
 
 **Risposta:** ⚠️ **Problema Noto:** `WebSocketContext.allMessages` accumula TUTTI i messaggi.
 
-**Soluzione 1 - Ring Buffer (semplice):**
-```javascript
-// WebSocketContext.jsx
-const MAX_MESSAGES = 10000;  // Ultimi 10K messaggi
-
-setAllMessages(prev => {
-    const newMessages = [...prev, newMessage];
-    // Taglia array se troppo grande
-    if (newMessages.length > MAX_MESSAGES) {
-        return newMessages.slice(-MAX_MESSAGES);
-    }
-    return newMessages;
-});
-```
-
-**Soluzione 2 - Carica da DB (migliore ma più complessa):**
-```javascript
-// Invece di accumulare in memoria, carica da DB on-demand
-const fetchHistoricalData = async (classId, startTime, endTime) => {
-    const response = await fetch(
-        `/api/marketdata/history?classId=${classId}&start=${startTime}&end=${endTime}`
-    );
-    return await response.json();
-};
-```
+**Stato attuale:**
+- Nessun limite implementato; tutti i messaggi sono mantenuti in memoria.
+- Il ring buffer e la paginazione da DB sono solo suggerimenti futuri, non presenti nel codice.
 
 ---
 
@@ -348,6 +280,8 @@ docker run -p 8081:8080 trade-impact-web
 ```
 
 Accedi a: `http://localhost:8081`
+
+**Nota:** Il frontend mostra uno spinner di attesa durante la connessione WebSocket (UX migliorata).
 
 ---
 

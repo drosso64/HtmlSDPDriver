@@ -2,6 +2,11 @@
 
 Gateway web per visualizzazione e gestione dati market in tempo reale via protocollo SDP.
 
+**Stato attuale (marzo 2026):**
+- I dati visualizzati nelle griglie sono mantenuti in memoria (sia backend che frontend). Le griglie NON leggono direttamente dal database H2, ma dal contesto WebSocket/in-memory.
+- Le funzioni di inserimento/modifica/cancellazione record (ADD/RWT/DEL) sono presenti solo lato frontend e loggano su console; la trasmissione reale via SDP non è ancora implementata.
+- Tutte le modifiche recenti (gestione enum, null/default, UX WebSocket, JSON modal, persistenza tab) sono implementate e documentate in ARCHITECTURE.md.
+
 ## 🎯 Scegli la Tua Guida
 
 ### 1. Prima Volta sul Progetto?
@@ -77,23 +82,27 @@ HtmlDriver/
 - Pool di connessioni persistenti (INFO_BRT, TXN, QUERY)
 - Sottoscrizioni dinamiche classi market data
 - Broadcast WebSocket a tutti i client
+- Spinner di attesa durante la connessione WebSocket (UX migliorata)
 
 ✅ **Griglia Dati Dinamica**
 - Colonne generate automaticamente dai dati
 - Ordine colonne = ordine campi classe Java
 - Filtri Excel-like (dropdown, checkbox, search)
 - Sorting, resizing, pagination
+- I dati sono mantenuti in memoria, NON letti dal DB
 
 ✅ **Gestione Record**
 - View/Edit modal con tutti i campi
+- Modal con editing JSON e inizializzazione ricorsiva dei default/null
 - Badge "➕ Nuovo Record" per inserimenti
 - Badge "📋" per row per visualizzazione completa
-- Bottoni ADD/RWT/DEL (TODO: implementare SDP transactions)
+- Bottoni ADD/RWT/DEL (invio reale: il frontend chiama TransactionController backend via REST, che esegue la transazione secondo protocollo SDP)
 
 ✅ **Tab Dinamici**
 - Tab automatici per ogni classe sottoscritta
 - Contatori record in tempo reale
 - Pop-out su nuova finestra browser
+- Stato tab persistente dopo edit/refresh
 
 ---
 
@@ -117,17 +126,17 @@ HtmlDriver/
 
 1. **Memory Leak Frontend**
    - `allMessages` array cresce indefinitamente
-   - Soluzione: Ring buffer o paginazione DB
+   - Stato attuale: nessun limite implementato; tutti i messaggi sono mantenuti in memoria.
    - Dettagli: [`MAINTENANCE.md#scenario-5`](MAINTENANCE.md#scenario-5-risolvere-memory-leak-allmessages-cresce-allinfinito)
 
 2. **Transazioni Non Implementate**
    - ADD/RWT/DEL loggano solo console
-   - Serve implementare `TransactionController` + deserializer
+   - Stato attuale: nessuna trasmissione reale via SDP
    - Dettagli: [`MAINTENANCE.md#scenario-4`](MAINTENANCE.md#scenario-4-implementare-transazioni-addrwtdel)
 
 3. **Database Schema Generico**
    - Singola tabella per tutti i messaggi (JSON blob)
-   - Migliore: tabelle per classe con UPSERT su business key
+   - Stato attuale: il database H2 è usato solo come storico, non come fonte dati per le griglie; nessuna logica di UPSERT implementata.
    - TODO: Attendere mapping business keys dal team TradeImpact
 
 ### 🎯 Prossime Priorità

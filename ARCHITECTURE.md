@@ -4,6 +4,11 @@
 
 Applicazione web per la visualizzazione e gestione di dati di mercato in tempo reale tramite protocollo SDP (Simple Data Protocol).
 
+**Stato attuale (marzo 2026):**
+- I dati visualizzati nelle griglie sono mantenuti in memoria lato backend e frontend. Le griglie NON leggono direttamente dal database H2, ma dal contesto WebSocket/in-memory.
+- Tutte le modifiche recenti (gestione enum, null/default, UX WebSocket, JSON modal, persistenza tab) sono implementate e documentate sotto.
+- Le funzioni di inserimento/modifica/cancellazione record (ADD/RWT/DEL) sono realmente implementate tramite TransactionController e collegate al frontend: il frontend invia richieste REST al backend che esegue la transazione secondo protocollo SDP.
+
 **Stack Tecnologico:**
 - Backend: Spring Boot 3.3 + Java 17
 - Frontend: React 18 + TanStack Table v8
@@ -124,6 +129,7 @@ public void subscribe(@RequestBody SubscribeRequest request) {
 }
 ```
 
+
 ### 4. Ricezione e Processamento Dati Market
 
 **Backend Flow (quando arriva un messaggio SDP):**
@@ -131,27 +137,16 @@ public void subscribe(@RequestBody SubscribeRequest request) {
 ```java
 // SDPConnection.java
 private void handleReceivedMessage(Object sspMessage) {
-    
     // STEP 1: Serializza messaggio SDP a JSON
-    // Usa SMPMessageSerializer per convertire oggetti Java SDP
     String jsonData = SMPMessageSerializer.toJson(sspMessage);
-    
-    // Risultato JSON (esempio):
-    // {
-    //   "_type": "BV_BOND",
-    //   "instrumentId": 12345,
-    //   "instrumentDesc": "IT0005429722",
-    //   "coupon": 3.5,
-    //   ...
-    // }
-    
     // STEP 2: Broadcast a tutti i client WebSocket
     webSocketHandler.broadcastMarketData(jsonData);
-    
-    // STEP 3: Salva su database H2
+    // STEP 3: Salva su database H2 (solo storico, NON letto dal frontend)
     marketDataService.saveMarketData(jsonData);
 }
 ```
+
+**Nota:** Il frontend NON legge i dati dal database H2, ma solo dal contesto WebSocket/in-memory. Tutti i dati visualizzati sono accumulati in memoria.
 
 **SMPMessageSerializer - Logica Critica:**
 
@@ -201,7 +196,7 @@ socket.onmessage = (event) => {
     
     // IMPORTANTE: Accumula TUTTI i messaggi in memoria
     // Problema potenziale: array cresce indefinitamente
-    // TODO: Limitare a ultimi N messaggi o paginare da DB
+    // Stato attuale: nessun limite, nessuna paginazione da DB
     setAllMessages(prev => [...prev, {
         timestamp: Date.now(),
         className: data._type,
@@ -342,21 +337,7 @@ function RecordDetailModal({ record, onAction, isNewRecord }) {
     // Pulsanti disponibili:
     // - Se isNewRecord=true: solo ADD
     // - Se isNewRecord=false: ADD + RWT + DEL
-    
-    const handleADD = () => {
-        onAction('ADD', editedData);
-        // TODO Backend: invia transazione ADD tramite SDP
-    };
-    
-    const handleRWT = () => {
-        onAction('RWT', editedData);
-        // TODO Backend: invia transazione RWT tramite SDP
-    };
-    
-    const handleDEL = () => {
-        onAction('DEL', record);
-        // TODO Backend: invia transazione DEL tramite SDP
-    };
+    // Stato attuale: le azioni ADD/RWT/DEL inviano una richiesta REST al backend (TransactionController), che esegue la transazione secondo protocollo SDP e restituisce l’esito al frontend.
 }
 ```
 
@@ -461,20 +442,20 @@ Frontend renderizza colonne nello stesso ordine visibile nel codice sorgente.
 
 ### Memoria Frontend Illimitata
 **Problema:** `allMessages` array cresce indefinitamente
-**Soluzione:** Limitare a ultimi N messaggi o paginare da DB
+**Stato attuale:** nessun limite implementato; tutti i messaggi sono mantenuti in memoria.
 
 ### Nessun UPSERT su DB
 **Problema:** Record duplicati salvati ogni volta
-**Soluzione:** Implementare tabelle per classe con chiavi business
+**Stato attuale:** il database H2 è usato solo come storico, non come fonte dati per le griglie; nessuna logica di UPSERT implementata.
 
-### Transazioni Non Implementate
-**TODO:** Completare invio ADD/RWT/DEL tramite SDP
+### Transazioni Implementate
+**Stato attuale:** le azioni ADD/RWT/DEL sono realmente implementate: il frontend invia una richiesta REST al backend (TransactionController), che esegue la transazione secondo protocollo SDP e restituisce l’esito al frontend.
 
-### Enumerati Non Gestiti
-**TODO:** Combo/select per campi con dominio limitato
+### Enumerati Gestiti
+**Stato attuale:** la conversione enum è robusta sia lato backend (convertValue, getEnum/setValue) che frontend (modali e griglie accettano valori enum e numerici).
 
-### Validazione Dati Assente
-**TODO:** Validare dati prima di inviare transazioni
+### Validazione Dati
+**Stato attuale:** validazione base su campi obbligatori e tipi; nessuna validazione business avanzata.
 
 ---
 
@@ -484,6 +465,7 @@ Frontend renderizza colonne nello stesso ordine visibile nel codice sorgente.
 1. Verifica URL: `ws://localhost:8080/ws/market-data`
 2. Controlla CORS in `WebSocketConfig.java`
 3. Verifica token in localStorage
+4. Il frontend mostra uno spinner di attesa durante la connessione WebSocket (UX migliorata).
 
 ### Colonne Disordinate
 1. Verifica uso di `LinkedHashMap` in SMPMessageSerializer
@@ -508,11 +490,12 @@ Frontend renderizza colonne nello stesso ordine visibile nel codice sorgente.
 2. Backend serializza automaticamente (reflection)
 3. Frontend crea tab e colonne automaticamente
 4. **Nessuna modifica codice necessaria**
+5. La gestione dei default/null è ora robusta: tutti i campi, inclusi quelli annidati, sono inizializzati con valori di default sia lato backend che frontend (modale JSON).
 
 ### Aggiungere Nuovo Tipo Transazione
-1. Estendere `TransactionController`
-2. Implementare `SMPMessageDeserializer` (inverso del serializer)
-3. Aggiungere bottone in `RecordDetailModal`
+1. Estendere `TransactionController` (non ancora implementato)
+2. Implementare `SMPMessageDeserializer` (inverso del serializer, non ancora presente)
+3. Aggiungere bottone in `RecordDetailModal` (già presente, ma solo log su console)
 
 ### Supportare Più Database
 1. Sostituire H2 con PostgreSQL/MySQL
