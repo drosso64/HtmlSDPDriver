@@ -79,7 +79,8 @@ public class AuthService {
                 "IPSP_ADDRESS_SERVICE", // Service label for IPSP address service
                 request.getUsername(),
                 request.getPassword(),
-                marketFactory
+                marketFactory,
+                config.getIpsp().getSsl()
             );
             
             // IMPORTANT: Prepare the future BEFORE connecting

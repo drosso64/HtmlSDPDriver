@@ -97,6 +97,11 @@ public class SDPConfigProperties {
         private boolean useSsl = true;
         
         /**
+         * SSL certificate configuration
+         */
+        private Ssl ssl = new Ssl();
+        
+        /**
          * Get host from system property if set, otherwise from config
          */
         public String getHost() {
@@ -119,6 +124,47 @@ public class SDPConfigProperties {
             String systemSsl = System.getProperty("IPSP_SSL");
             return systemSsl != null ? Boolean.parseBoolean(systemSsl) : useSsl;
         }
+    }
+    
+    @Data
+    public static class Ssl {
+        /**
+         * Enable SSL/TLS for IPSP connections
+         */
+        private boolean enabled = false;
+        
+        /**
+         * PKCS12 (.pfx) file path - contains both key and trust certificates
+         * If specified, this takes precedence over keystore/truststore
+         */
+        private String pfxPath;
+        
+        /**
+         * PKCS12 (.pfx) file password
+         */
+        private String pfxPassword;
+        
+        /**
+         * Keystore path (JKS format) - contains private key
+         * Used only if pfxPath is not specified
+         */
+        private String keystorePath;
+        
+        /**
+         * Keystore password
+         */
+        private String keystorePassword;
+        
+        /**
+         * Truststore path (JKS format) - contains trusted CA certificates
+         * Used only if pfxPath is not specified
+         */
+        private String truststorePath;
+        
+        /**
+         * Truststore password
+         */
+        private String truststorePassword;
     }
 
     @Data

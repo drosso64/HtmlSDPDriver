@@ -2,7 +2,9 @@ package com.mts.gateway.sdp;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mts.gateway.config.SDPConfigProperties;
 import com.mts.gateway.dto.TransactionResponse;
+import com.mts.gateway.ssl.SSLContextFactory;
 import com.mts.gateway.util.SMPMessageSerializer;
 import com.mtsmarkets.io.xdr.ULong;
 import com.mtsmarkets.sdp.client.*;
@@ -14,6 +16,7 @@ import com.mtsmarkets.sdp.smp.SMPMessage;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.net.ssl.SSLContext;
 import java.io.Closeable;
 import java.time.Instant;
 import java.util.Map;
@@ -40,6 +43,7 @@ public class SDPConnection implements Closeable {
     private final String username;
     private final String password;
     private final MarketFactory marketFactory;
+    private final SDPConfigProperties.Ssl sslConfig;
     
     // Optional WebSocket handler for broadcasting data
     private Object webSocketHandler;
@@ -64,7 +68,8 @@ public class SDPConnection implements Closeable {
     private Instant createdAt;
     
     public SDPConnection(String connectionId, String host, int port, String serviceName, 
-                         String username, String password, MarketFactory marketFactory) {
+                         String username, String password, MarketFactory marketFactory,
+                         SDPConfigProperties.Ssl sslConfig) {
         this.connectionId = connectionId;
         this.host = host;
         this.port = port;
@@ -72,6 +77,7 @@ public class SDPConnection implements Closeable {
         this.username = username;
         this.password = password;
         this.marketFactory = marketFactory;
+        this.sslConfig = sslConfig;
         this.createdAt = Instant.now();
         this.lastActivity = Instant.now();
     }
@@ -103,9 +109,36 @@ public class SDPConnection implements Closeable {
         log.info("========================================");
         
         try {
-            // Create TCP context (no SSL for now)
+            // Create TCP context with optional SSL
             log.debug("Creating TCP context...");
-            TCPContext tcpContext = new TCPContext();
+            
+            SSLContext sslContext = null;
+            if (sslConfig != null && sslConfig.isEnabled()) {
+                try {
+                    log.info("SSL is enabled, creating SSLContext...");
+                    SSLContextFactory.SslConfig factoryConfig = new SSLContextFactory.SslConfig();
+                    factoryConfig.setEnabled(true);
+                    factoryConfig.setPfxPath(sslConfig.getPfxPath());
+                    factoryConfig.setPfxPassword(sslConfig.getPfxPassword());
+                    factoryConfig.setKeystorePath(sslConfig.getKeystorePath());
+                    factoryConfig.setKeystorePassword(sslConfig.getKeystorePassword());
+                    factoryConfig.setTruststorePath(sslConfig.getTruststorePath());
+                    factoryConfig.setTruststorePassword(sslConfig.getTruststorePassword());
+                    
+                    sslContext = SSLContextFactory.createSSLContext(factoryConfig);
+                    log.info("✓ SSL context created successfully");
+                } catch (Exception e) {
+                    log.error("Failed to create SSL context: {}", e.getMessage(), e);
+                    throw new SDPException(com.mtsmarkets.sdp.common.SDPResultCode.TCP_CONNECT_FAILED,
+                        "SSL configuration error: " + e.getMessage());
+                }
+            } else {
+                log.debug("SSL is disabled or not configured");
+            }
+            
+            TCPContext tcpContext = sslContext != null 
+                ? new TCPContext(sslContext) 
+                : new TCPContext();
             
             if (isIPSP) {
                 // IPSP connection - only AddressServiceChannel needed

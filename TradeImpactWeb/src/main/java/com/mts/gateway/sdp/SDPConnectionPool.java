@@ -251,7 +251,8 @@ public class SDPConnectionPool {
             serviceType,
             config.getIpsp().getUsername(),
             config.getIpsp().getPassword(),
-            marketFactory
+            marketFactory,
+            config.getIpsp().getSsl()
         );
         
         connection.setWebSocketHandler(webSocketHandler);
@@ -406,7 +407,8 @@ public class SDPConnectionPool {
             serviceType,
             username,
             password,
-            marketFactory
+            marketFactory,
+            config.getIpsp().getSsl()
         );
         
         connection.setWebSocketHandler(webSocketHandler);
