@@ -1,0 +1,21 @@
+{
+  "name": "tradeimpact-web",
+  "version": "1.0.0",
+  "description": "TradeImpact Web Gateway - Playwright Tests",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:api": "playwright test tests/bv-bond-subscription-api.spec.js",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:headed": "playwright test --headed",
+    "test:report": "playwright show-report"
+  },
+  "keywords": ["playwright", "testing", "websocket", "tradeimpact"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "ws": "^8.13.0"
+  }
+}

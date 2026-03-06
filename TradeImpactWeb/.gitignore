@@ -43,3 +43,11 @@ application-dev.yml
 frontend/node_modules/
 frontend/build/
 frontend/.env.local
+
+# Playwright Tests
+playwright-tests/node_modules/
+playwright-tests/playwright-report/
+playwright-tests/test-results/
+playwright-tests/package-lock.json
+playwright-tests/.cache/
+playwright-tests/.env.proxy

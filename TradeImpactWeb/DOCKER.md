@@ -49,6 +49,57 @@ IPSP_SSL=true
 DATABASE_CLEANUP_RETENTION_DAYS=30
 ```
 
+### Configurazione SSL/TLS (Opzionale)
+
+Se il server IPSP richiede certificati SSL client, configurare uno dei seguenti metodi:
+
+**Metodo 1: File PKCS12 (.pfx) - Consigliato**
+```properties
+# .env
+IPSP_SSL_ENABLED=true
+IPSP_SSL_PFX_PATH=/app/certs/client-cert.pfx
+IPSP_SSL_PFX_PASSWORD=your-pfx-password
+```
+
+```bash
+# Montare il certificato nel container
+docker run -d \
+  --name tradeimpact-web \
+  -p 8080:8080 \
+  -v $(pwd)/certs:/app/certs:ro \
+  -e IPSP_SSL_ENABLED=true \
+  -e IPSP_SSL_PFX_PATH=/app/certs/client-cert.pfx \
+  -e IPSP_SSL_PFX_PASSWORD=your-pfx-password \
+  tradeimpact-web:latest
+```
+
+**Metodo 2: Keystore e Truststore separati (JKS)**
+```properties
+# .env
+IPSP_SSL_ENABLED=true
+IPSP_SSL_KEYSTORE_PATH=/app/certs/keystore.jks
+IPSP_SSL_KEYSTORE_PASSWORD=keystore-password
+IPSP_SSL_TRUSTSTORE_PATH=/app/certs/truststore.jks
+IPSP_SSL_TRUSTSTORE_PASSWORD=truststore-password
+```
+
+```yaml
+# docker-compose.yml
+volumes:
+  - ./certs:/app/certs:ro
+environment:
+  - IPSP_SSL_ENABLED=true
+  - IPSP_SSL_KEYSTORE_PATH=/app/certs/keystore.jks
+  - IPSP_SSL_KEYSTORE_PASSWORD=${IPSP_SSL_KEYSTORE_PASSWORD}
+  - IPSP_SSL_TRUSTSTORE_PATH=/app/certs/truststore.jks
+  - IPSP_SSL_TRUSTSTORE_PASSWORD=${IPSP_SSL_TRUSTSTORE_PASSWORD}
+```
+
+**Note Sicurezza:**
+- Montare certificati come **read-only** (`:ro`)
+- Non committare password in `.env` - usare variabili di ambiente o secrets
+- I certificati possono essere generati esternamente o forniti dal team IPSP
+
 ### 3. Avvia Applicazione
 
 **Opzione A: Script automatico**

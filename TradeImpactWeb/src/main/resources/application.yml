@@ -74,6 +74,22 @@ sdp:
     default-host: ${IPSP_HOST:}
     default-port: ${IPSP_PORT:8800}
     use-ssl: ${IPSP_SSL:true}
+    
+    # SSL/TLS Certificate Configuration (optional)
+    ssl:
+      # Enable SSL certificate authentication
+      enabled: ${IPSP_SSL_ENABLED:false}
+      
+      # Option 1: PKCS12 (.pfx) - single file with key and trust certificates (recommended)
+      pfx-path: ${IPSP_SSL_PFX_PATH:}
+      pfx-password: ${IPSP_SSL_PFX_PASSWORD:}
+      
+      # Option 2: Separate keystore and truststore (JKS format)
+      # Only used if pfx-path is not specified
+      keystore-path: ${IPSP_SSL_KEYSTORE_PATH:}
+      keystore-password: ${IPSP_SSL_KEYSTORE_PASSWORD:}
+      truststore-path: ${IPSP_SSL_TRUSTSTORE_PATH:}
+      truststore-password: ${IPSP_SSL_TRUSTSTORE_PASSWORD:}
   
   # Subscription Configuration
   subscriptions:

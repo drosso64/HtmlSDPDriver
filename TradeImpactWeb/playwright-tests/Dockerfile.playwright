@@ -1,0 +1,50 @@
+FROM mcr.microsoft.com/playwright:v1.58.2-jammy
+
+# Informazioni immagine
+LABEL maintainer="TradeImpactWeb"
+LABEL description="Playwright test environment for TradeImpactWeb"
+
+# Argomenti per proxy (opzionali)
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+
+# Imposta proxy se forniti
+ENV HTTP_PROXY=${HTTP_PROXY}
+ENV HTTPS_PROXY=${HTTPS_PROXY}
+ENV NO_PROXY=${NO_PROXY}
+
+# Imposta directory di lavoro
+WORKDIR /tests
+
+# Copia i file di configurazione
+COPY package.json ./
+COPY playwright.config.js ./
+
+# Configura npm per il proxy (se impostato)
+RUN if [ -n "$HTTP_PROXY" ]; then \
+        npm config set proxy $HTTP_PROXY && \
+        npm config set https-proxy $HTTPS_PROXY; \
+    fi && \
+    npm config set fetch-timeout 300000 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000
+
+# Installa dipendenze
+RUN npm install --verbose
+
+# Copia i test
+COPY tests/ ./tests/
+
+# Copia gli script helper
+COPY run-playwright-test.sh ./
+RUN chmod +x run-playwright-test.sh
+
+# Crea directory per i report
+RUN mkdir -p /tests/playwright-report /tests/test-results
+
+# Imposta l'utente pwuser (già presente nell'immagine base)
+USER pwuser
+
+# Command di default: esegue i test
+CMD ["npm", "test"]

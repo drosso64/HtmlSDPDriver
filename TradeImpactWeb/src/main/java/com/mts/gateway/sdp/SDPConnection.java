@@ -864,7 +864,11 @@ public class SDPConnection implements Closeable {
         
         @Override
         public void onDisconnected(SDPResult sdpResult) {
-            log.warn("Broadcast channel disconnected: {}", sdpResult.getCode());
+            try {
+                log.warn("Broadcast channel disconnected: {} - {}", sdpResult.getCode(), sdpResult.toString());
+            } catch (Exception e) {
+                log.warn("Broadcast channel disconnected: {} (toString failed)", sdpResult.getCode());
+            }
         }
         
         /**

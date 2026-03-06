@@ -112,6 +112,10 @@ public class SubscriptionService {
         }
         
         try {
+            // Diagnostic logging: record connection state before subscribing
+            log.debug("Subscription - Connection info: id={} connected={} loggedIn={} host={} port={}",
+                connection.getConnectionId(), connection.isConnected(), connection.isLoggedIn(), connection.getHost(), connection.getPort());
+
             // Send subscription request (will use appropriate channel based on service type)
             ULong classIdULong = new ULong(classInfo.getClassId());
             ULong filterKeyULong = filterKey != null ? new ULong(filterKey) : null;
@@ -125,8 +129,15 @@ public class SubscriptionService {
             
             // Wait for subscription key (with timeout)
             Long subscriptionKey = subscriptionFuture.get(30, java.util.concurrent.TimeUnit.SECONDS);
-            
+
             log.info("Subscription request sent successfully, key: {}", subscriptionKey);
+            // Diagnostic logging: record connection state after subscribing
+            try {
+                log.debug("Post-subscribe - Connection info: id={} connected={} loggedIn={} host={} port={}",
+                    connection.getConnectionId(), connection.isConnected(), connection.isLoggedIn(), connection.getHost(), connection.getPort());
+            } catch (Exception e) {
+                log.warn("Failed to log post-subscribe connection state: {}", e.getMessage());
+            }
             return subscriptionKey;
         } catch (java.util.concurrent.TimeoutException e) {
             throw new RuntimeException("Timeout waiting for subscription response from AP", e);

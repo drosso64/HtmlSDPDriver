@@ -312,6 +312,20 @@ sdp:
     use-ssl: ${IPSP_SSL:true}
     username: gateway_user
     password: ${IPSP_PASSWORD}
+    
+    # Configurazione SSL/TLS (opzionale - per autenticazione client con certificati)
+    ssl:
+      enabled: false  # Abilita per usare certificati client SSL
+      
+      # Metodo 1: PKCS12 (.pfx) - Consigliato (singolo file)
+      pfx-path: ${IPSP_SSL_PFX_PATH:}
+      pfx-password: ${IPSP_SSL_PFX_PASSWORD:}
+      
+      # Metodo 2: Keystore/Truststore separati (JKS) - Usato se pfx-path non specificato
+      keystore-path: ${IPSP_SSL_KEYSTORE_PATH:}
+      keystore-password: ${IPSP_SSL_KEYSTORE_PASSWORD:}
+      truststore-path: ${IPSP_SSL_TRUSTSTORE_PATH:}
+      truststore-password: ${IPSP_SSL_TRUSTSTORE_PASSWORD:}
   
   connection-pool:
     min-size: 2
@@ -319,6 +333,28 @@ sdp:
   
   database:
     retention-days: 30  # Cleanup automatico
+```
+
+**Esempio configurazione SSL con PKCS12:**
+```yaml
+ipsp:
+  default-host: ipsp.production.com
+  use-ssl: true
+  ssl:
+    enabled: true
+    pfx-path: ./certs/client-cert.pfx
+    pfx-password: ${CERT_PASSWORD}  # Letto da variabile ambiente
+```
+
+**Esempio configurazione SSL con Keystore/Truststore:**
+```yaml
+ipsp:
+  ssl:
+    enabled: true
+    keystore-path: ./certs/keystore.jks
+    keystore-password: ${KEYSTORE_PWD}
+    truststore-path: ./certs/truststore.jks
+    truststore-password: ${TRUSTSTORE_PWD}
 ```
 
 ## Compilazione
