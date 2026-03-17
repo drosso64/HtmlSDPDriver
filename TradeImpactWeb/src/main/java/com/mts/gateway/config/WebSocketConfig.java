@@ -24,7 +24,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(marketDataHandler, "/ws/marketdata")
+        // Register handler for per-market WebSocket paths (e.g. /ws/BV)
+        registry.addHandler(marketDataHandler, "/ws/*")
                 .setAllowedOrigins("*"); // Allow all origins for development
     }
 

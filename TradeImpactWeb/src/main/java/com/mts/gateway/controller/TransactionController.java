@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/transactions")
+@RequestMapping("/api/markets/{market}/transactions")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class TransactionController {
@@ -44,9 +44,11 @@ public class TransactionController {
      * @return Transaction response with result and transaction ID
      */
     @PostMapping
-    public ResponseEntity<TransactionResponse> executeTransaction(@RequestBody TransactionRequest request) {
-        log.info("POST /api/transactions - user={} classId={} action={}", 
-            request.getUsername(), request.getClassId(), request.getAction());
+    public ResponseEntity<TransactionResponse> executeTransaction(
+            @PathVariable("market") String market,
+            @RequestBody TransactionRequest request) {
+        log.info("POST /api/markets/{}/transactions - user={} classId={} action={} (mapped to SAPMonitoredActionReq)",
+            market, request.getUsername(), request.getClassId(), request.getAction());
         
         try {
             // Validate request
@@ -74,8 +76,8 @@ public class TransactionController {
                 );
             }
             
-            // Execute transaction
-            TransactionResponse response = transactionService.executeTransaction(request);
+            // Execute monitored transaction (only SAPMonitoredActionReq is supported)
+            TransactionResponse response = transactionService.executeMonitoredTransaction(market, request);
             
             // Sempre 200: il rifiuto dal mercato non è un errore server,
             // è una risposta business valida con success=false
@@ -95,92 +97,6 @@ public class TransactionController {
         }
     }
     
-    /**
-     * POST /api/transactions/monitored
-     * Execute a monitored transaction (with monitoring capability)
-     * 
-     * Monitored transactions allow tracking the transaction lifecycle
-     * through subsequent status updates from the market.
-     * 
-     * @param request Transaction request
-     * @return Transaction response with monitoring ID
-     */
-    @PostMapping("/monitored")
-    public ResponseEntity<TransactionResponse> executeMonitoredTransaction(
-            @RequestBody TransactionRequest request) {
-        
-        log.info("POST /api/transactions/monitored - user={} classId={} action={}", 
-            request.getUsername(), request.getClassId(), request.getAction());
-        
-        try {
-            // Validate request
-            if (request.getUsername() == null || request.getUsername().isEmpty()) {
-                return ResponseEntity.badRequest().body(
-                    TransactionResponse.error("Username is required")
-                );
-            }
-            
-            if (request.getClassId() == null) {
-                return ResponseEntity.badRequest().body(
-                    TransactionResponse.error("Class ID is required")
-                );
-            }
-            
-            if (request.getAction() == null) {
-                return ResponseEntity.badRequest().body(
-                    TransactionResponse.error("Action is required")
-                );
-            }
-            
-            if (request.getData() == null || request.getData().isEmpty()) {
-                return ResponseEntity.badRequest().body(
-                    TransactionResponse.error("Transaction data is required")
-                );
-            }
-            
-            TransactionResponse response = transactionService.executeMonitoredTransaction(request);
-            
-            // Sempre 200: il rifiuto dal mercato non è un errore server,
-            // è una risposta business valida con success=false
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            log.error("Failed to execute monitored transaction", e);
-            return ResponseEntity.internalServerError().body(
-                TransactionResponse.error("Monitored transaction failed: " + e.getMessage())
-            );
-        }
-    }
-    
-    /**
-     * POST /api/transactions/extended
-     * Execute an extended transaction (with extended fields)
-     * 
-     * Extended transactions support additional fields beyond
-     * the standard transaction structure.
-     * 
-     * @param request Transaction request
-     * @return Transaction response
-     */
-    @PostMapping("/extended")
-    public ResponseEntity<TransactionResponse> executeExtendedTransaction(
-            @RequestBody TransactionRequest request) {
-        
-        log.info("POST /api/transactions/extended - user={} classId={} action={}", 
-            request.getUsername(), request.getClassId(), request.getAction());
-        
-        try {
-            TransactionResponse response = transactionService.executeExtendedTransaction(request);
-            
-            // Sempre 200: il rifiuto dal mercato non è un errore server,
-            // è una risposta business valida con success=false
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            log.error("Failed to execute extended transaction", e);
-            return ResponseEntity.internalServerError().body(
-                TransactionResponse.error("Extended transaction failed: " + e.getMessage())
-            );
-        }
-    }
+    // Extended and direct Action transactions are intentionally not exposed.
+    // All REST transactions are mapped to SAPMonitoredActionReq.
 }

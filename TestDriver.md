@@ -470,8 +470,8 @@ Log di un container avviato con successo:
 ### Endpoint reali da verificare
 
 - Login: `POST /api/auth/login`
-- WebSocket: `/ws/marketdata` (token in query string `?token=...`)
-- Transazioni: `POST /api/transactions`, `POST /api/transactions/monitored`, `POST /api/transactions/extended`
+- WebSocket: `/ws/{market}` (token in query string `?token=...`)
+- Transazioni: `POST /api/markets/{market}/transactions` (monitored only)
 
 ### Nota importante sul flusso dati UI
 
@@ -575,7 +575,7 @@ Dovresti vedere solo connessioni ai servizi del mercato 8 (INFO_BRT, TXN_INFO_PR
 
 1. Aprire una tab classe e aprire il `RecordDetailModal` su un record esistente (`📋`) oppure creare un nuovo record (`➕`).
 2. Eseguire azione `ADD`, `RWT` o `DEL`.
-3. Verificare nel tab Network la chiamata a `POST /api/transactions/monitored`.
+3. Verificare nel tab Network la chiamata a `POST /api/markets/{market}/transactions`.
 4. Verificare nei log backend la ricezione in `TransactionController` e l'esecuzione in `TransactionService`.
 5. Verificare esito risposta (`success=true/false`) mostrato nel frontend.
 
@@ -874,7 +874,7 @@ Platform/Market ID: 2, Name: MTS
 - [x] MarketFactory correttamente rilevato: `BVF_Factory`
 - [x] Pool inizializzato in lazy mode
 - [x] Tomcat in esecuzione su porta 8080 (interna) / 8081 (esterna)
-- [x] Endpoint transazioni REST operativi (`/api/transactions`, `/api/transactions/monitored`, `/api/transactions/extended`)
+- [x] Endpoint transazioni REST operativi (`/api/markets/{market}/transactions` - monitored only exposed)
 
 ### ⏳ Pending User Testing
 

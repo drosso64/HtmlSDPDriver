@@ -7,6 +7,8 @@ const api = axios.create({
   }
 });
 
+const getMarket = () => localStorage.getItem('market') || 'BV';
+
 // Request interceptor per aggiungere token/session
 api.interceptors.request.use(
   (config) => {
@@ -58,22 +60,22 @@ export const classes = {
 // Subscriptions
 export const subscriptions = {
   getAll: () => 
-    api.get('/subscriptions'),
+    api.get(`/markets/${getMarket()}/subscriptions`),
   
   getUserSubscriptions: (username) =>
-    api.get(`/subscriptions/user/${username}`),
+    api.get(`/markets/${getMarket()}/subscriptions/user/${username}`),
   
   getActiveSubscriptions: (username) =>
-    api.get(`/subscriptions/user/${username}/active`),
+    api.get(`/markets/${getMarket()}/subscriptions/user/${username}/active`),
   
-  create: (username, classId) =>
-    api.post('/subscriptions', { username, classId }),
+  create: (requestDto) =>
+    api.post(`/markets/${getMarket()}/subscriptions`, requestDto),
   
   delete: (subscriptionId) =>
-    api.delete(`/subscriptions/${subscriptionId}`),
+    api.delete(`/markets/${getMarket()}/subscriptions/${subscriptionId}`),
   
   deleteByClassId: (username, classId) =>
-    api.delete(`/subscriptions/${username}/${classId}`),
+    api.delete(`/markets/${getMarket()}/subscriptions/${username}/${classId}`),
   
   // Legacy endpoints (kept for compatibility)
   subscribe: (className) => 
@@ -95,13 +97,13 @@ export const marketData = {
 // Transactions
 export const transactions = {
   getTypes: () => 
-    api.get('/transactions/types'),
+    api.get(`/markets/${getMarket()}/transactions/types`),
   
   getFields: (type) => 
-    api.get(`/transactions/types/${type}/fields`),
+    api.get(`/markets/${getMarket()}/transactions/types/${type}/fields`),
   
   submit: (type, data) => 
-    api.post('/transactions', { type, data }),
+    api.post(`/markets/${getMarket()}/transactions`, { type, data }),
 
   /**
    * Invia una transazione monitored (SAPMonitoredActionReq)
@@ -113,7 +115,7 @@ export const transactions = {
    * @returns {Promise} TransactionResponse
    */
   submitMonitored: ({ classId, action, data, username }) =>
-    api.post('/transactions/monitored', { classId, action, data, username })
+    api.post(`/markets/${getMarket()}/transactions`, { classId, action, data, username })
 };
 
 // Query

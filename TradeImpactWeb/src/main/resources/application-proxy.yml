@@ -1,0 +1,14 @@
+server:
+  port: 8443
+  ssl:
+    enabled: true
+    key-store: ${SERVER_KEYSTORE_PATH:certs/server-keystore.p12}
+    key-store-password: ${SERVER_KEYSTORE_PASSWORD:changeit}
+    key-store-type: PKCS12
+    trust-store: ${SERVER_TRUSTSTORE_PATH:certs/server-truststore.jks}
+    trust-store-password: ${SERVER_TRUSTSTORE_PASSWORD:changeit}
+    client-auth: need
+
+security:
+  ip:
+    whitelist: 127.0.0.1,::1

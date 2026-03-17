@@ -121,9 +121,9 @@ GET    /api/market-data/{className}
 GET    /api/market-data/{className}/history
 
 // Transactions
-GET    /api/transactions/types
-GET    /api/transactions/types/{type}/fields
-POST   /api/transactions
+GET    /api/markets/{market}/transactions/types
+GET    /api/markets/{market}/transactions/types/{type}/fields
+POST   /api/markets/{market}/transactions
 
 // Query
 POST   /api/query
@@ -140,7 +140,7 @@ POST   /api/cleanup/execute
 ### WebSocket Endpoint
 
 ```
-ws://localhost:8080/ws/market-data
+ws://localhost:8080/ws/{market}
 ```
 
 **Message Types:**

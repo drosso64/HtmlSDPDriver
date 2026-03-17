@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TradeImpact Web Gateway — API & WebSocket Documentation</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:24px;color:#222}
+    h1,h2,h3{color:#0b4f76}
+    pre{background:#f6f8fa;padding:12px;border:1px solid #e1e4e8;overflow:auto}
+    code{background:#eef;padding:2px 4px;border-radius:3px}
+    table{border-collapse:collapse;width:100%;margin-bottom:16px}
+    th,td{border:1px solid #ddd;padding:8px;text-align:left}
+    th{background:#f0f6fa}
+    .muted{color:#666;font-size:0.95em}
+  </style>
+</head>
+<body>
+  <h1>TradeImpact Web Gateway — API & WebSocket</h1>
+  <p class="muted">Documentazione per sviluppatori che devono integrare client REST e WebSocket verso il proxy. Contiene descrizioni, esempi e comandi di test.</p>
+
+  <h2>Indice</h2>
+  <ul>
+    <li><a href="#auth">Autenticazione (login/logout/session)</a></li>
+    <li><a href="#transactions">Transazioni REST</a></li>
+    <li><a href="#subscriptions">Sottoscrizioni (REST) e gestione</a></li>
+    <li><a href="#websocket">WebSocket — connessione e ricezione dati di mercato</a></li>
+    <li><a href="#security">Sicurezza: HTTPS / mTLS / JWT / IP whitelist</a></li>
+    <li><a href="#examples">Esempi rapidi (curl + wscat)</a></li>
+    <li><a href="#errors">Codici di errore e comportamento</a></li>
+    <li><a href="#files">File e riferimenti nel repository</a></li>
+  </ul>
+
+  <h2 id="auth">1) Autenticazione</h2>
+  <p>Endpoint per login/logout e controllo sessione. Il login stabilisce (in background) le connessioni SDP verso gli Access Point e restituisce un token di sessione che deve essere usato per le richieste successive.</p>
+
+  <h3>POST /api/auth/login</h3>
+  <table>
+    <tr><th>Metodo</th><td>POST</td></tr>
+    <tr><th>Path</th><td>/api/auth/login</td></tr>
+    <tr><th>Body (JSON)</th>
+      <td>
+        <pre>{
+  "username": "dev",
+  "password": "dev",
+  "ipspHost": "ipsp.example.com",
+  "ipspPort": 8800,
+  "useSsl": true
+}</pre>
+      </td></tr>
+    <tr><th>Response (200)</th>
+      <td>
+        <pre>{
+  "success": true,
+  "token": "<session-token>",
+  "username": "dev",
+  "connected": true
+}</pre>
+      </td></tr>
+  </table>
+
+  <h3>POST /api/auth/logout</h3>
+  <p>Invalidate la sessione. Fornisce header `Authorization` con il token.</p>
+
+  <h4>Esempio: logout (curl)</h4>
+  <pre>curl -s -X POST http://localhost:8080/api/auth/logout \
+  -H "Authorization: Bearer $TOKEN"</pre>
+
+  <h3>GET /api/auth/session</h3>
+  <p>Verifica se la sessione è valida (passare header `Authorization`).</p>
+
+  <h4>Esempio: controlla sessione</h4>
+  <pre>curl -s -X GET http://localhost:8080/api/auth/session \
+  -H "Authorization: Bearer $TOKEN" | jq</pre>
+
+  <h2 id="transactions">2) Transazioni (REST)</h2>
+  <p>Invia transazioni monitorate verso il mercato. Tutte le transazioni REST sono mappate su <strong>SAPMonitoredActionReq</strong> e devono usare il path basato sul mercato.</p>
+
+  <h3>POST /api/markets/{market}/transactions</h3>
+  <p>Invio transazione monitored. Il mercato è specificato nel path (`{market}`) quindi il payload NON deve contenere il campo `market`.</p>
+  <pre>{
+  "classId": 114809,
+  "action": "ADD",
+  "smpPayload": {
+    "InstrumentId": 12345,
+    "Quantity": 1000,
+    "Price": 99.5
+  }
+}</pre>
+
+  <h4>Esempio: invio transazione (curl)</h4>
+  <pre>curl -s -X POST http://localhost:8080/api/markets/BV/transactions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"classId":114809,"action":"ADD","smpPayload":{"InstrumentId":12345,"Quantity":1000}}' | jq</pre>
+
+  <h4>Response attesa (200)</h4>
+  <pre>{
+  "referenceId": null,
+  "status": "OK",
+  "message": "Transaction accepted"
+}</pre>
+
+  <h2 id="subscriptions">3) Sottoscrizioni (REST)</h2>
+  <p>Creazione e rimozione sottoscrizioni avviene via REST; i dati effettivi arrivano su WebSocket.</p>
+
+  <h3>POST /api/markets/{market}/subscriptions</h3>
+  <p>Crea una sottoscrizione per il mercato specificato nel path. Il campo `market` NON deve essere incluso nel body.</p>
+  <pre>{
+  "username": "trader1",
+  "reqId": 0,
+  "subscribeType": "All",
+  "classId": 100003,
+  "classVer": 0,
+  "startTs0": 0,
+  "startTs1": 0,
+  "filterKey": 0,
+  "subMask": null
+}</pre>
+
+  <h4>Esempio: crea sottoscrizione (curl)</h4>
+  <pre>curl -s -X POST http://localhost:8080/api/markets/BV/subscriptions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"trader1","classId":100003,"subscribeType":"All"}' | jq</pre>
+
+  <h4>Response (200)</h4>
+  <pre>{ "classId": 100003, "className": "BV_TRADE", "subscriptionKey": 9876 }</pre>
+
+  <h3>GET /api/markets/{market}/subscriptions/user/{username}</h3>
+  <p>Restituisce le sottoscrizioni correnti per l'utente autenticato nel mercato specificato.</p>
+
+  <h4>Esempio: lista sottoscrizioni</h4>
+  <pre>curl -s -X GET http://localhost:8080/api/markets/BV/subscriptions/user/dev \
+  -H "Authorization: Bearer $TOKEN" | jq</pre>
+
+  <h3>DELETE /api/markets/{market}/subscriptions/{username}/{classId}</h3>
+  <p>Rimuove la sottoscrizione per l'utente e la classe specificati.</p>
+  <pre>curl -s -X DELETE http://localhost:8080/api/markets/BV/subscriptions/dev/100003 \
+  -H "Authorization: Bearer $TOKEN"</pre>
+
+  <h2 id="websocket">4) WebSocket — connessione e ricezione</h2>
+  <p>Usare WebSocket per ricevere eventi push di mercato (quote, trade, book, ecc.). Il WebSocket è autenticato tramite lo stesso token usato per REST.</p>
+
+  <h3>Endpoint</h3>
+  <table>
+    <tr><th>Path</th><td>/ws/{market}</td></tr>
+    <tr><th>Protocol</th><td>wss (preferibile in produzione) / ws (dev)</td></tr>
+    <tr><th>Auth</th><td>Query param `?token=<session-token>` o header `Authorization: Bearer &lt;token&gt;`</td></tr>
+  </table>
+
+  <h3>Comportamento</h3>
+  <ul>
+    <li>Al momento della connessione il server lega la sessione WebSocket al token e all'username.</li>
+    <li>I messaggi di mercato vengono inviati solo alle sessioni i cui utenti hanno attive sottoscrizioni per il `classId` specifico.</li>
+    <li>I payload sono JSON prodotti da `SMPMessageSerializer` (mapping dinamico da oggetti SMP).</li>
+  </ul>
+
+  <h3>Esempio messaggio ricevuto</h3>
+  <pre>{
+  "type": "marketData",
+  "classId": 100003,
+  "className": "BV_TRADE",
+  "timestamp": 1670000000000,
+  "hashKey": "abc123",
+  "data": { "Price": 99.5, "Quantity": 1000 }
+}</pre>
+
+  <h4>Conferma di routing (esempio per sviluppatori)</h4>
+  <p>Se sei sottoscritto a `classId=100003` riceverai messaggi come sopra; se non sei sottoscritto il server non invierà nulla per quella classe.</p>
+
+  <h4>Esempio con WebSocket binary/text framing</h4>
+  <p>I messaggi sono inviati come testo UTF-8 JSON. Non è richiesto framing binario.</p>
+
+  <h2 id="security">5) Sicurezza</h2>
+  <h3>TLS / HTTPS / mTLS</h3>
+  <p>In produzione utilizzare HTTPS (server) e TLS per connessioni SDP. Per mTLS impostare i keystore/truststore e la proprietà `SERVER_SSL_CLIENT_AUTH=need`.</p>
+
+  <h3>JWT</h3>
+  <p>Il server verifica i JWT usando un JWK Set se `JWT_JWK_SET_URI` è configurato; altrimenti in dev viene usato un segreto HMAC di fallback (non sicuro in produzione).</p>
+
+  <h3>IP Whitelist</h3>
+  <p>È presente un filtro IP opzionale per limitare l'accesso REST ad IP specifici.</p>
+
+  <h2 id="examples">6) Esempi rapidi</h2>
+  <h3>Login (curl)</h3>
+  <pre>curl -s -X POST http://localhost:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"dev","password":"dev","ipspHost":"127.0.0.1","ipspPort":8800,"useSsl":false}' | jq</pre>
+
+  <h3>Connettersi via WebSocket (wscat)</h3>
+  <pre>wscat -c "ws://localhost:8080/ws/BV?token=$TOKEN"
+# in produzione usare wss:
+wscat -c "wss://localhost:8443/ws/BV?token=$TOKEN" --no-check
+</pre>
+
+  <h3>Inviare transazione</h3>
+  <pre>curl -X POST http://localhost:8080/api/markets/BV/transactions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"classId":114809,"action":"ADD","smpPayload":{"InstrumentId":12345}}'</pre>
+
+  <h2 id="errors">7) Errori e comportamento</h2>
+  <ul>
+    <li>401 Unauthorized — token mancante o non valido.</li>
+    <li>400 Bad Request — payload non valido (es. campi mancanti o formato errato). Nota: il campo <code>market</code> va passato nel path (`/api/markets/{market}/...`) e non nel body.</li>
+    <li>500 Internal Server Error — errore lato server (es. class loader non inizializzato, mancanza JAR di mercato).</li>
+  </ul>
+
+  <h4>Esempi di error response</h4>
+  <pre>
+  HTTP/1.1 400 Bad Request
+  {
+    "error":"BadRequest",
+    "message":"Missing required field: market"
+  }
+
+  HTTP/1.1 401 Unauthorized
+  {
+    "error":"Unauthorized",
+    "message":"Invalid token"
+  }
+  </pre>
+
+  <h2 id="files">8) File e riferimenti nel repository</h2>
+  <ul>
+    <li>`TradeImpactWeb/src/main/java/com/mts/gateway/controller/TransactionController.java` — implementazione endpoint transazioni</li>
+    <li>`TradeImpactWeb/src/main/java/com/mts/gateway/controller/SubscriptionController.java` — gestione sottoscrizioni</li>
+    <li>`TradeImpactWeb/src/main/java/com/mts/gateway/websocket/MarketDataWebSocketHandler.java` — WebSocket handler</li>
+    <li>`TradeImpactWeb/src/main/java/com/mts/gateway/smp` — mapper registry e mapper</li>
+    <li>`TradeImpactWeb/README-DEV.md` — quickstart sviluppo</li>
+    <li>`PROXY_ARCHITECTURE.md` — panoramica architetturale</li>
+  </ul>
+
+  <hr>
+  <p class="muted">Questa documentazione può essere estesa con esempi per ogni endpoint (request/response dettagliati) e con uno Swagger/OpenAPI se desideri l'esportazione automatica. Vuoi che generi anche un file OpenAPI/Swagger JSON basato sugli endpoint attuali?</p>
+
+</body>
+</html>

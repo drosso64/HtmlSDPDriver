@@ -17,7 +17,8 @@ export const useMarketDataWebSocket = () => {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.hostname;
       const port = 8081; // Porta del backend (mappata da Docker: -p 8081:8080)
-      const wsUrl = `${protocol}//${host}:${port}/ws/marketdata`;
+      const market = localStorage.getItem('market') || 'BV';
+      const wsUrl = `${protocol}//${host}:${port}/ws/${encodeURIComponent(market)}`;
 
       console.log('Connessione WebSocket a:', wsUrl);
       

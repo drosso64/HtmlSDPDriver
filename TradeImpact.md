@@ -1751,7 +1751,7 @@ Access Point (10.232.92.86:22034) → [SDP] → SDPConnection.onSubscribeData()
 - Campi: `class_id`, `class_name`, `json_data`, `action`, `received_at`
 
 **WebSocketConfig.java** (AGGIORNATO)
-- Registrato endpoint: `/ws/marketdata`
+- Registrato endpoint: `/ws/{market}`
 - CORS abilitato: `setAllowedOrigins("*")`
 
 **SDPConnection.java** (AGGIORNATO)
@@ -1828,7 +1828,7 @@ docker compose logs -f | grep -i websocket
 #### Test WebSocket da Browser Console
 
 ```javascript
-const ws = new WebSocket('ws://localhost:8080/ws/marketdata');
+const ws = new WebSocket('ws://localhost:8080/ws/{market}');
 ws.onopen = () => console.log('✅ Connesso');
 ws.onmessage = (e) => console.log('📊 Dati:', JSON.parse(e.data));
 ```

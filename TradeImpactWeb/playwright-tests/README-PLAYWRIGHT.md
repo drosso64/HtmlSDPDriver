@@ -91,7 +91,7 @@ Il test stampa a console informazioni dettagliate:
 🚀 Inizio test BV_BOND Subscription
 
 📡 Configurazione intercettazione WebSocket...
-✅ WebSocket connesso: ws://localhost:8081/ws/marketdata
+✅ WebSocket connesso: ws://localhost:8081/ws/BV
 
 🌐 Navigazione alla pagina di login...
 ✅ Pagina di login caricata
@@ -218,7 +218,7 @@ Il browser si è chiuso inaspettatamente. Prova a:
 
 Verifica che:
 - L'applicazione backend sia in esecuzione
-- Il WebSocket endpoint sia `ws://localhost:8081/ws/marketdata`
+- Il WebSocket endpoint sia `ws://localhost:8081/ws/BV`
 - Non ci siano firewall o proxy che bloccano la connessione
 
 ## 📚 Risorse

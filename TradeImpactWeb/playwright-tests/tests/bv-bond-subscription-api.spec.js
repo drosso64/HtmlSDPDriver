@@ -80,8 +80,6 @@ test.describe('API-only BV_BOND subscription', () => {
     expect(token, 'Could not obtain auth token from login').toBeTruthy();
 
     // Resolve class id if a name was provided
-    const subscribeUrl = `${base}/api/classes/subscribe`;
-    console.log('Subscribe URL:', subscribeUrl);
     let classIdToSubscribe = TEST_CONFIG.classToSubscribe;
     if (typeof classIdToSubscribe === 'string' && isNaN(Number(classIdToSubscribe))) {
       console.log('Resolving class name to numeric ID for', classIdToSubscribe);
@@ -108,7 +106,7 @@ test.describe('API-only BV_BOND subscription', () => {
     const wsUrl = (() => {
       const u = new URL(base);
       u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
-      u.pathname = '/ws/marketdata';
+      u.pathname = '/ws/BV';
       u.searchParams.set('token', token);
       return u.toString();
     })();
@@ -204,17 +202,26 @@ test.describe('API-only BV_BOND subscription', () => {
     await new Promise(r => setTimeout(r, 2000));
 
     // 2) SUBSCRIBE via REST (after WS is open/connected)
-    const subRes = await fetch(subscribeUrl, {
+    const market = process.env.MARKET || 'BV';
+    const subscribeDto = {
+      username: TEST_CONFIG.username,
+      reqId: `${Date.now()}-${Math.floor(Math.random()*10000)}`,
+      subscribeType: 1,
+      classId: Number(classIdToSubscribe),
+      classVer: 0,
+      startTs0: 0,
+      startTs1: 0,
+      filterKey: 0,
+      subMask: 0
+    };
+
+    const subRes = await fetch(`${base}/api/markets/${market}/subscriptions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({
-        username: TEST_CONFIG.username,
-        classIds: [Number(classIdToSubscribe)],
-        filterKey: 0
-      })
+      body: JSON.stringify(subscribeDto)
     });
 
     const subJson = await tryJson(subRes);
@@ -227,15 +234,14 @@ test.describe('API-only BV_BOND subscription', () => {
     const duration = (Date.now() - start) / 1000;
     console.log(`Collected ${messages.length} messages in ${duration}s`);
 
-    // 4) UNSUBSCRIBE
-    const unsubscribeUrl = `${base}/api/classes/unsubscribe`;
-    const unsubRes = await fetch(unsubscribeUrl, {
-      method: 'POST',
+    // 4) UNSUBSCRIBE (market-scoped)
+    const market2 = process.env.MARKET || 'BV';
+    const unsubUrl = `${base}/api/markets/${market2}/subscriptions/${encodeURIComponent(TEST_CONFIG.username)}/${Number(classIdToSubscribe)}`;
+    const unsubRes = await fetch(unsubUrl, {
+      method: 'DELETE',
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ classIds: [Number(classIdToSubscribe)] })
+      }
     });
 
     const unsubJson = await tryJson(unsubRes);

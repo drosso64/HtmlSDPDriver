@@ -28,11 +28,11 @@ TransactionResponse → Frontend
 
 ## REST API Endpoints
 
-### 1. Execute Standard Transaction
+### 1. Execute Monitored Transaction (only)
 
-**POST** `/api/transactions`
+**POST** `/api/markets/{market}/transactions`
 
-Esegue una transazione standard (SAPActionReq).
+Esegue una transazione monitored (SAPMonitoredActionReq). Questo servizio è l'unica PDU di transazione esposta: le varianti `SAPActionReq` e `SAPExtActionReq` non sono esposte via REST.
 
 **Request Body:**
 ```json
@@ -72,11 +72,7 @@ Esegue una transazione standard (SAPActionReq).
 }
 ```
 
-### 2. Execute Monitored Transaction
-
-**POST** `/api/transactions/monitored`
-
-Esegue una transazione con monitoring (SAPMonitoredActionReq). Permette di tracciare il ciclo di vita della transazione attraverso status update.
+<!-- Monitored transactions are described above; the separate /monitored endpoint is deprecated. -->
 
 **Request Body:**
 ```json
@@ -104,25 +100,7 @@ Esegue una transazione con monitoring (SAPMonitoredActionReq). Permette di tracc
 }
 ```
 
-### 3. Execute Extended Transaction
-
-**POST** `/api/transactions/extended`
-
-Esegue una transazione estesa (SAPExtActionReq) con campi addizionali.
-
-**Request Body:**
-```json
-{
-  "username": "trader1",
-  "classId": "BV_MARKET_ORDER",
-  "action": "RWT",
-  "data": {
-    "OrderId": 999,
-    "Quantity": 2000000,
-    "Price": 100.25
-  }
-}
-```
+<!-- Extended transactions are not supported via REST in this gateway. -->
 
 ## Transaction Actions
 
@@ -138,7 +116,7 @@ Esegue una transazione estesa (SAPExtActionReq) con campi addizionali.
 ### Example 1: Add Market Order (BV_MARKET_ORDER)
 
 ```bash
-curl -X POST http://localhost:8081/api/transactions \
+curl -X POST http://localhost:8081/api/markets/BV/transactions \
   -H "Content-Type: application/json" \
   -d '{
     "username": "trader1",
@@ -167,7 +145,7 @@ curl -X POST http://localhost:8081/api/transactions \
 ### Example 2: Modify Order (RWT)
 
 ```bash
-curl -X POST http://localhost:8081/api/transactions \
+curl -X POST http://localhost:8081/api/markets/BV/transactions \
   -H "Content-Type: application/json" \
   -d '{
     "username": "trader1",
@@ -184,7 +162,7 @@ curl -X POST http://localhost:8081/api/transactions \
 ### Example 3: Delete Order (DEL)
 
 ```bash
-curl -X POST http://localhost:8081/api/transactions \
+curl -X POST http://localhost:8081/api/markets/BV/transactions \
   -H "Content-Type: application/json" \
   -d '{
     "username": "trader1",
@@ -199,7 +177,7 @@ curl -X POST http://localhost:8081/api/transactions \
 ### Example 4: Add IOI with Monitoring
 
 ```bash
-curl -X POST http://localhost:8081/api/transactions/monitored \
+curl -X POST http://localhost:8081/api/markets/BV/transactions \
   -H "Content-Type: application/json" \
   -d '{
     "username": "trader1",
@@ -398,7 +376,7 @@ curl -X POST http://localhost:8081/api/auth/login \
 ### 3. Execute Transaction
 
 ```bash
-curl -X POST http://localhost:8081/api/transactions \
+curl -X POST http://localhost:8081/api/markets/BV/transactions \
   -H "Content-Type: application/json" \
   -d '{
     "username": "trader1",
@@ -439,7 +417,8 @@ Transaction response: txnId=1 result=SDP_OK
 // Frontend example
 async function sendOrder(orderData) {
   try {
-    const response = await fetch('/api/transactions', {
+    const market = 'BV';
+    const response = await fetch(`/api/markets/${market}/transactions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -490,7 +469,8 @@ Usa transazioni monitorate quando hai bisogno di tracking:
 
 ```javascript
 // Send monitored transaction
-const response = await fetch('/api/transactions/monitored', {
+const market = 'BV';
+const response = await fetch(`/api/markets/${market}/transactions`, {
   method: 'POST',
   body: JSON.stringify(transactionRequest)
 });

@@ -14,6 +14,10 @@ function TransactionForm() {
     fetchTransactionTypes();
   }, []);
 
+  const getMarket = () => {
+    return localStorage.getItem('market') || 'BV';
+  };
+
   useEffect(() => {
     if (selectedType) {
       fetchTransactionFields(selectedType);
@@ -22,7 +26,8 @@ function TransactionForm() {
 
   const fetchTransactionTypes = async () => {
     try {
-      const response = await fetch('/api/transactions/types');
+      const market = getMarket();
+      const response = await fetch(`/api/markets/${market}/transactions/types`);
       if (response.ok) {
         const data = await response.json();
         setTransactionTypes(data);
@@ -34,7 +39,8 @@ function TransactionForm() {
 
   const fetchTransactionFields = async (type) => {
     try {
-      const response = await fetch(`/api/transactions/types/${type}/fields`);
+      const market = getMarket();
+      const response = await fetch(`/api/markets/${market}/transactions/types/${type}/fields`);
       if (response.ok) {
         const data = await response.json();
         setFields(data);
@@ -61,7 +67,8 @@ function TransactionForm() {
     setError(null);
 
     try {
-      const response = await fetch('/api/transactions', {
+      const market = getMarket();
+      const response = await fetch(`/api/markets/${market}/transactions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

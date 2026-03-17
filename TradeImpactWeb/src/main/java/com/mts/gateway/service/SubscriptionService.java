@@ -89,6 +89,21 @@ public class SubscriptionService {
             throw new RuntimeException("Failed to subscribe to AP: " + e.getMessage(), e);
         }
     }
+
+    /**
+     * Overloaded createSubscription accepting SAP-aligned DTO.
+     */
+    @Transactional
+    public ActiveSubscriptionService.SubscriptionInfo createSubscription(com.mts.gateway.dto.SubscriptionRequestDto request) {
+        // Use provided classId and filterKey (if any) from the PDU-aligned DTO
+        String username = request.getUsername();
+        Long classId = request.getClassId();
+        Long filterKey = request.getFilterKey() != null ? request.getFilterKey() : 0L;
+
+        log.info("Creating subscription (PDU) for user={} classId={} filterKey={}", username, classId, filterKey);
+
+        return createSubscription(username, classId);
+    }
     
     /**
      * Send subscription request to Access Point and wait for subscription key

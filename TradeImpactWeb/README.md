@@ -7,8 +7,8 @@ Applicazione web completa (frontend React + backend Spring Boot) per la gestione
 **Deployment Docker** (consigliato - nessuna installazione locale richiesta):
 GET  /api/classes/{classId}       # Dettagli classe
 GET  /api/classes/{classId}/schema # Schema classe
-POST /api/classes/subscribe       # Subscribe multiplo
-POST /api/classes/unsubscribe     # Unsubscribe multiplo
+POST /api/markets/{market}/subscriptions   # Crea sottoscrizione (PDU-aligned)
+DELETE /api/markets/{market}/subscriptions/{username}/{classId}   # Disiscrivi utente da classe
 POST /api/classes/reload          # Reload CSV class metadata
 ```bash
 # Build immagine (include frontend + backend)
@@ -26,9 +26,8 @@ GET    /api/subscriptions/database/stats         # Statistiche DB subscriptions
 ```
 - **Spring Boot 3.2.2** - Framework applicativo
 - **Java 17** - Runtime
-POST /api/transactions            # Esegue transazione standard
-POST /api/transactions/monitored  # Esegue transazione monitored
-POST /api/transactions/extended   # Esegue transazione extended
+POST /api/markets/{market}/transactions            # Esegue transazione monitored (esposta)
+<!-- Standard/extended transactions are internal and not exposed via REST -->
 ```
 
 ### Database Management
@@ -244,8 +243,8 @@ GET  /api/auth/session            # Verifica sessione
 GET  /api/classes                 # Lista classi disponibili
 GET  /api/classes/{classId}       # Dettagli classe
 GET  /api/classes/{classId}/schema # Schema classe
-POST /api/classes/subscribe       # Subscribe multiplo
-POST /api/classes/unsubscribe     # Unsubscribe multiplo
+POST /api/markets/{market}/subscriptions   # Crea sottoscrizione (PDU-aligned)
+DELETE /api/markets/{market}/subscriptions/{username}/{classId}   # Disiscrivi utente da classe
 POST /api/classes/reload          # Reload CSV class metadata
 
 GET  /api/metadata/{classId}
@@ -270,9 +269,7 @@ GET    /api/subscriptions/database/stats         # Statistiche DB subscriptions
 
 ### Transactions
 ```
-POST /api/transactions            # Esegue transazione standard
-POST /api/transactions/monitored  # Esegue transazione monitored
-POST /api/transactions/extended   # Esegue transazione extended
+POST /api/markets/{market}/transactions   # Esegue transazione monitored (SAPMonitoredActionReq)
 ```
 
 ### Database Management
@@ -286,7 +283,7 @@ DELETE /api/database/marketdata/class/{classId}  # Delete classe + unsubscribe c
 
 ## WebSocket
 
-**Endpoint:** `ws://localhost:8080/ws/marketdata`
+**Endpoint:** `ws://localhost:8080/ws/{market}`
 
 **Message Types:**
 ```javascript

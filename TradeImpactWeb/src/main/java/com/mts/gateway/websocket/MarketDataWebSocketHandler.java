@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mts.gateway.service.AuthService;
 import com.mts.gateway.service.MarketDataService;
 import com.mts.gateway.service.MarketDataUpsertService;
+import com.mts.gateway.service.ActiveSubscriptionService;
 import com.mts.gateway.sdp.SDPConnectionPool;
 import com.mts.gateway.util.SMPMessageSerializer;
 import lombok.extern.slf4j.Slf4j;
@@ -32,8 +33,10 @@ public class MarketDataWebSocketHandler extends TextWebSocketHandler {
     private final MarketDataUpsertService marketDataUpsertService; // NEW: For table-per-class UPSERT
     private final SDPConnectionPool connectionPool;
     private final AuthService authService;
+    private final ActiveSubscriptionService activeSubscriptionService;
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
     private final Map<String, String> sessionTokens = new ConcurrentHashMap<>(); // sessionId -> token
+    private final Map<String, String> sessionMarkets = new ConcurrentHashMap<>(); // sessionId -> market
     private final ObjectMapper objectMapper = new ObjectMapper();
     
     // Constructor with @Lazy to break circular dependency
@@ -41,17 +44,34 @@ public class MarketDataWebSocketHandler extends TextWebSocketHandler {
             MarketDataService marketDataService,
             MarketDataUpsertService marketDataUpsertService,
             @Lazy SDPConnectionPool connectionPool,
-            @Lazy AuthService authService) {
+            @Lazy AuthService authService,
+            ActiveSubscriptionService activeSubscriptionService) {
         this.marketDataService = marketDataService;
         this.marketDataUpsertService = marketDataUpsertService;
         this.connectionPool = connectionPool;
         this.authService = authService;
+        this.activeSubscriptionService = activeSubscriptionService;
     }
     
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         sessions.put(session.getId(), session);
         
+        // Extract market from path (/ws/{market})
+        String market = null;
+        if (session.getUri() != null && session.getUri().getPath() != null) {
+            String path = session.getUri().getPath();
+            if (path.startsWith("/ws/")) {
+                market = path.substring(4);
+                // trim any trailing segments
+                int slash = market.indexOf('/');
+                if (slash != -1) market = market.substring(0, slash);
+            }
+        }
+        if (market != null) {
+            sessionMarkets.put(session.getId(), market);
+        }
+
         // Extract token from query parameters or headers
         String token = extractToken(session);
         if (token != null) {
@@ -96,6 +116,7 @@ public class MarketDataWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         sessions.remove(session.getId());
         String token = sessionTokens.remove(session.getId());
+        sessionMarkets.remove(session.getId());
         
         log.info("WebSocket connection closed: sessionId={}, status={}, token={}, total={}", 
             session.getId(), status, token != null ? "present" : "missing", sessions.size());
@@ -154,44 +175,141 @@ public class MarketDataWebSocketHandler extends TextWebSocketHandler {
             log.trace("No WebSocket clients connected, skipping broadcast");
             return;
         }
-        
+
         try {
-            
             Map<String, Object> message = Map.of(
                 "type", "marketData",
                 "classId", classId,
                 "className", className,
-                "data", dataJson, // Structured JSON string
-                "hashKey", hashKey != null ? hashKey : 0L, // For frontend UPSERT
+                "data", dataJson,
+                "hashKey", hashKey != null ? hashKey : 0L,
                 "timestamp", System.currentTimeMillis()
             );
-            
+
             String json = objectMapper.writeValueAsString(message);
-            log.info("Sending WebSocket message to {} clients: {}", sessions.size(), 
-                json.length() > 200 ? json.substring(0, 200) + "..." : json);
             TextMessage textMessage = new TextMessage(json);
-            
+
+            // Determine subscribed usernames for this classId
+            var allSubs = activeSubscriptionService.getAllActiveSubscriptions();
+            java.util.Set<String> subscribedUsers = new java.util.HashSet<>();
+            for (var pair : allSubs) {
+                var info = pair.getSubscriptionInfo();
+                if (info != null && info.getClassId() != null && info.getClassId().equals(classId)) {
+                    subscribedUsers.add(pair.getUsername());
+                }
+            }
+
             int sentCount = 0;
-            // Broadcast to all connected sessions
-            for (WebSocketSession session : sessions.values()) {
+            if (subscribedUsers.isEmpty()) {
+                log.debug("No active subscriptions found for class {} - skipping targeted send", classId);
+            } else {
+                log.info("Sending market data for class {} to subscribed users: {}", classId, subscribedUsers);
+                // For each connected session, check if its token belongs to a subscribed user
+                for (var entry : sessions.entrySet()) {
+                    String sessionId = entry.getKey();
+                    WebSocketSession session = entry.getValue();
+                    String token = sessionTokens.get(sessionId);
+                    // If session has market binding and no market provided (legacy), allow
+                    String sessMarket = sessionMarkets.get(sessionId);
+                    if (token == null) continue;
+                    try {
+                        var sess = authService.getSession(token);
+                        if (sess == null) continue;
+                        String username = sess.getUsername();
+                        if (username == null) continue;
+                        if (!subscribedUsers.contains(username)) continue;
+
+                        if (session.isOpen()) {
+                            synchronized (session) {
+                                session.sendMessage(textMessage);
+                                sentCount++;
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.debug("Failed to map token to session username for session {}: {}", sessionId, e.getMessage());
+                    }
+                }
+
+                log.info("Successfully sent market data for class {} to {} sessions", classId, sentCount);
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to route market data to subscribed clients: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Broadcast market data scoped to a specific market path.
+     * Only sessions connected to /ws/{market} will receive the message.
+     */
+    public void broadcastMarketData(String market, Long classId, String className, Object data) {
+        if (market == null) {
+            broadcastMarketData(classId, className, data);
+            return;
+        }
+
+        String dataJson = SMPMessageSerializer.toJson(data);
+
+        // Get subscribers as before
+        var allSubs = activeSubscriptionService.getAllActiveSubscriptions();
+        java.util.Set<String> subscribedUsers = new java.util.HashSet<>();
+        for (var pair : allSubs) {
+            var info = pair.getSubscriptionInfo();
+            if (info != null && info.getClassId() != null && info.getClassId().equals(classId)) {
+                subscribedUsers.add(pair.getUsername());
+            }
+        }
+
+        if (sessions.isEmpty()) {
+            log.trace("No WebSocket clients connected, skipping broadcast");
+            return;
+        }
+
+        try {
+            Map<String, Object> message = Map.of(
+                "type", "marketData",
+                "market", market,
+                "classId", classId,
+                "className", className,
+                "data", dataJson,
+                "timestamp", System.currentTimeMillis()
+            );
+
+            String json = objectMapper.writeValueAsString(message);
+            TextMessage textMessage = new TextMessage(json);
+
+            int sentCount = 0;
+            for (var entry : sessions.entrySet()) {
+                String sessionId = entry.getKey();
+                WebSocketSession session = entry.getValue();
+                String sessMarket = sessionMarkets.get(sessionId);
+                if (sessMarket == null || !sessMarket.equals(market)) continue;
+
+                String token = sessionTokens.get(sessionId);
+                if (token == null) continue;
+
                 try {
+                    var sess = authService.getSession(token);
+                    if (sess == null) continue;
+                    String username = sess.getUsername();
+                    if (username == null) continue;
+                    if (!subscribedUsers.contains(username)) continue;
+
                     if (session.isOpen()) {
                         synchronized (session) {
                             session.sendMessage(textMessage);
                             sentCount++;
                         }
                     }
-                } catch (IOException e) {
-                    log.error("Failed to send message to session {}: {}", 
-                        session.getId(), e.getMessage());
+                } catch (Exception e) {
+                    log.debug("Failed to send market data to session {}: {}", sessionId, e.getMessage());
                 }
             }
-            
-            log.info("Successfully sent market data for class {} to {}/{} clients", 
-                className, sentCount, sessions.size());
-            
+
+            log.info("Sent market data for class {} on market {} to {} sessions", classId, market, sentCount);
+
         } catch (Exception e) {
-            log.error("Failed to broadcast market data: {}", e.getMessage(), e);
+            log.error("Failed to route market data to subscribed clients: {}", e.getMessage(), e);
         }
     }
     

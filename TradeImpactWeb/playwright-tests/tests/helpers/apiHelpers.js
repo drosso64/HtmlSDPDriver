@@ -8,6 +8,7 @@ const sessionStore = {
   currentToken: null,
   baseUrl: null,
   ws: null,           // single shared WebSocket for the session
+  market: process.env.MARKET || 'BV',
 };
 
 async function tryJson(res) {
@@ -34,7 +35,9 @@ async function _openWebSocket(connectedTimeout = 10000) {
   const base = getBase();
   const u = new URL(base);
   u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
-  u.pathname = '/ws/marketdata';
+  // allow override via env or login flow
+  const market = sessionStore.market || 'BV';
+  u.pathname = `/ws/${market}`;
   u.searchParams.set('token', sessionStore.currentToken);
 
   const ws = new WebSocket(u.toString());
@@ -204,13 +207,30 @@ export async function subscribe(classIds, { waitForMessages = true, maxMessages 
   // start collector BEFORE sending REST subscribe to avoid missing early messages
   const collectorResult = waitForMessages ? _startCollector(ids, maxMessages, timeout) : null;
 
-  const res = await fetch(`${getBase()}/api/classes/subscribe`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStore.currentToken}` },
-    body: JSON.stringify({ username: sessionStore.currentUser, classIds: ids, filterKey: 0 }),
-  });
-  const body = await tryJson(res);
-  console.log('Subscribe REST result:', res.status);
+  // New API: send one PDU-shaped subscription per class to market-scoped endpoint
+  const market = sessionStore.market || 'BV';
+  let lastRes = null;
+  for (const cid of ids) {
+    const dto = {
+      username: sessionStore.currentUser,
+      reqId: `${Date.now()}-${Math.floor(Math.random()*10000)}`,
+      subscribeType: 1,
+      classId: Number(cid),
+      classVer: 0,
+      startTs0: 0,
+      startTs1: 0,
+      filterKey: 0,
+      subMask: 0
+    };
+    const res = await fetch(`${getBase()}/api/markets/${market}/subscriptions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStore.currentToken}` },
+      body: JSON.stringify(dto),
+    });
+    lastRes = res;
+    console.log('Subscribe REST result for', cid, res.status);
+  }
+  const body = lastRes ? await tryJson(lastRes) : null;
 
   if (!waitForMessages) return { subscribeResult: { ok: res.ok, status: res.status, body }, messages: [] };
 
@@ -226,13 +246,19 @@ export async function subscribe(classIds, { waitForMessages = true, maxMessages 
 export async function unsubscribe(classIds) {
   if (!sessionStore.currentToken) throw new Error('No active token');
   const ids = Array.isArray(classIds) ? classIds.map(Number) : [Number(classIds)];
-  const res = await fetch(`${getBase()}/api/classes/unsubscribe`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sessionStore.currentToken}` },
-    body: JSON.stringify({ classIds: ids }),
-  });
-  const body = await tryJson(res);
-  console.log('Unsubscribe REST result:', res.status);
+  // New API: delete per-class per-user subscription at market scope
+  const market = sessionStore.market || 'BV';
+  let lastRes = null;
+  for (const cid of ids) {
+    const url = `${getBase()}/api/markets/${market}/subscriptions/${encodeURIComponent(sessionStore.currentUser)}/${cid}`;
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${sessionStore.currentToken}` },
+    });
+    lastRes = res;
+    console.log('Unsubscribe REST result for', cid, res.status);
+  }
+  const body = lastRes ? await tryJson(lastRes) : null;
 
   // close WS gracefully after unsubscribe (awaitable)
   await _closeWebSocket();

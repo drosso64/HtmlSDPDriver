@@ -47,6 +47,7 @@ public class SDPConnection implements Closeable {
     
     // Optional WebSocket handler for broadcasting data
     private Object webSocketHandler;
+    private String market; // market identifier (e.g. BV)
     
     private BroadcastChannelImpl broadcastChannel;
     private TransactionChannelImpl transactionChannel;
@@ -88,6 +89,17 @@ public class SDPConnection implements Closeable {
     public void setWebSocketHandler(Object handler) {
         this.webSocketHandler = handler;
         log.debug("WebSocket handler set for connection {}", connectionId);
+    }
+
+    /**
+     * Set market identifier for this connection
+     */
+    public void setMarket(String market) {
+        this.market = market;
+    }
+
+    public String getMarket() {
+        return this.market;
     }
     
     /**
@@ -483,6 +495,50 @@ public class SDPConnection implements Closeable {
             return CompletableFuture.failedFuture(e);
         }
     }
+
+    /**
+     * Send a monitored transaction and return the generated reqId (txnId).
+     * The returned reqId can be used for routing async responses to callers.
+     *
+     * @param smpMessage market SMP message
+     * @param action action name
+     * @return generated request id (txnId)
+     */
+    public long sendMonitoredTransactionAndReturnReqId(SMPMessage smpMessage, String action) {
+        if (transactionChannel == null) {
+            throw new IllegalStateException("Transaction channel not initialized");
+        }
+
+        long txnId = transactionIdCounter.getAndIncrement();
+        CompletableFuture<TransactionResponse> future = new CompletableFuture<>();
+        pendingTransactions.put(txnId, future);
+
+        try {
+            SAPMonitoredActionReq request = new SAPMonitoredActionReq(smpMessage);
+            request.setTransId(new ULong[] { new ULong(0), new ULong(txnId) });
+            request.setAction(SAPActionType.valueOf(action));
+            request.setReqId(new ULong(txnId));
+            request.setClassId(new ULong(smpMessage.getSMPClassId()));
+            request.setDataInResponse(1);
+
+            log.info("Sending monitored transaction (reqId={}): action={} classId={}", txnId, action, smpMessage.getSMPClassId());
+            transactionChannel.monitoredAction(request);
+            touchActivity();
+
+            future.orTimeout(30, TimeUnit.SECONDS)
+                .whenComplete((result, error) -> {
+                    if (error != null) {
+                        pendingTransactions.remove(txnId);
+                    }
+                });
+
+            return txnId;
+        } catch (Exception e) {
+            pendingTransactions.remove(txnId);
+            log.error("Failed to send monitored transaction", e);
+            throw new RuntimeException(e);
+        }
+    }
     
     /**
      * Send an extended transaction (SAPExtActionReq)
@@ -796,12 +852,20 @@ public class SDPConnection implements Closeable {
                 // Broadcast to WebSocket clients if handler is set
                 if (webSocketHandler != null && smpMessage != null) {
                     try {
-                        // Use reflection to call broadcastMarketData method
-                        java.lang.reflect.Method method = webSocketHandler.getClass()
-                            .getMethod("broadcastMarketData", Long.class, String.class, Object.class);
-                        
-                        log.info("Broadcasting market data: class={} (ID={})", className, classId);
-                        method.invoke(webSocketHandler, classId, className, smpMessage);
+                        // Try market-scoped signature first: (String market, Long classId, String className, Object data)
+                        java.lang.reflect.Method method = null;
+                        try {
+                            method = webSocketHandler.getClass()
+                                .getMethod("broadcastMarketData", String.class, Long.class, String.class, Object.class);
+                            log.info("Broadcasting market data (scoped): market={} class={} (ID={})", market, className, classId);
+                            method.invoke(webSocketHandler, market, classId, className, smpMessage);
+                        } catch (NoSuchMethodException nsme) {
+                            // Fallback to legacy signature
+                            method = webSocketHandler.getClass()
+                                .getMethod("broadcastMarketData", Long.class, String.class, Object.class);
+                            log.info("Broadcasting market data (legacy): class={} (ID={})", className, classId);
+                            method.invoke(webSocketHandler, classId, className, smpMessage);
+                        }
                         log.info("Market data broadcast successful");
                     } catch (Exception e) {
                         log.error("Failed to broadcast market data via WebSocket", e);
@@ -999,12 +1063,20 @@ public class SDPConnection implements Closeable {
                 // Broadcast to WebSocket clients if handler is set
                 if (webSocketHandler != null && smpMessage != null) {
                     try {
-                        // Use reflection to call broadcastMarketData method
-                        java.lang.reflect.Method method = webSocketHandler.getClass()
-                            .getMethod("broadcastMarketData", Long.class, String.class, Object.class);
-                        
-                        log.info("Broadcasting market data: class={} (ID={})", className, classId);
-                        method.invoke(webSocketHandler, classId, className, smpMessage);
+                        // Try market-scoped signature first: (String market, Long classId, String className, Object data)
+                        java.lang.reflect.Method method = null;
+                        try {
+                            method = webSocketHandler.getClass()
+                                .getMethod("broadcastMarketData", String.class, Long.class, String.class, Object.class);
+                            log.info("Broadcasting market data (scoped): market={} class={} (ID={})", market, className, classId);
+                            method.invoke(webSocketHandler, market, classId, className, smpMessage);
+                        } catch (NoSuchMethodException nsme) {
+                            // Fallback to legacy signature
+                            method = webSocketHandler.getClass()
+                                .getMethod("broadcastMarketData", Long.class, String.class, Object.class);
+                            log.info("Broadcasting market data (legacy): class={} (ID={})", className, classId);
+                            method.invoke(webSocketHandler, classId, className, smpMessage);
+                        }
                         log.info("Market data broadcast successful");
                     } catch (Exception e) {
                         log.error("Failed to broadcast market data via WebSocket", e);

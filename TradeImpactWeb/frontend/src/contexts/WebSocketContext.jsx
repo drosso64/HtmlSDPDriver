@@ -62,12 +62,14 @@ export const WebSocketProvider = ({ children }) => {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.hostname;
       const port = 8081; // Porta del backend (mappata da Docker: -p 8081:8080)
-      
+
+      // Market is required for per-market WebSocket path. Use selected market from localStorage or fallback to 'BV'.
+      const market = localStorage.getItem('market') || 'BV';
       // Add token to WebSocket URL for session tracking
       const token = localStorage.getItem('authToken');
-      const wsUrl = token 
-        ? `${protocol}//${host}:${port}/ws/marketdata?token=${encodeURIComponent(token)}`
-        : `${protocol}//${host}:${port}/ws/marketdata`;
+      const wsUrl = token
+        ? `${protocol}//${host}:${port}/ws/${encodeURIComponent(market)}?token=${encodeURIComponent(token)}`
+        : `${protocol}//${host}:${port}/ws/${encodeURIComponent(market)}`;
 
       console.log('🔌 Connessione WebSocket globale a:', wsUrl.replace(/token=[^&]+/, 'token=***'));
       

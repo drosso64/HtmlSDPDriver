@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import './ClassSubscription.css';
 import { useWebSocket } from '../contexts/WebSocketContext';
+import { subscriptions } from '../services/api';
 
 function ClassSubscription({ user }) {
   const [classes, setClasses] = useState([]);
@@ -53,43 +54,41 @@ function ClassSubscription({ user }) {
 
     setSubscribing(true);
     try {
-      const response = await fetch('/api/classes/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: user?.username || 'default-user',
-          classIds: Array.from(selectedClasses),
-          filterKey: 0
-        })
-      });
+      // Send one subscription request per class using SAP-aligned DTO
+      const username = user?.username || 'default-user';
+      const results = [];
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('📦 Subscription result:', result);
-        
-        // Initialize tabs for all successfully subscribed classes
-        if (result.results && ws?.initializeClass) {
-          console.log('🔍 Processing', result.results.length, 'subscription results');
-          result.results.forEach(r => {
-            console.log('  - ClassId:', r.classId, 'Status:', r.status, 'ClassName:', r.className);
-            if (r.status === 'success' && r.classId && r.className) {
-              console.log('🆕 Initializing tab for:', r.classId, r.className);
-              ws.initializeClass(r.classId, r.className);
-            }
-          });
-        } else {
-          console.warn('⚠️ Cannot initialize tabs:', {
-            hasResults: !!result.results,
-            hasInitializeClass: !!ws?.initializeClass,
-            ws: ws
-          });
+      for (const classId of Array.from(selectedClasses)) {
+        try {
+          const dto = {
+            username,
+            reqId: null,
+            subscribeType: 'All',
+            classId: classId,
+            classVer: 0,
+            startTs0: 0,
+            startTs1: 0,
+            filterKey: 0,
+            subMask: null
+          };
+
+          const resp = await subscriptions.create(dto);
+          const subInfo = resp.data;
+          results.push({ classId, status: 'success', className: subInfo.className, subscriptionKey: subInfo.subscriptionKey });
+
+          if (ws?.initializeClass) {
+            ws.initializeClass(subInfo.classId, subInfo.className);
+          }
+        } catch (err) {
+          console.error('Subscription failed for', classId, err);
+          results.push({ classId, status: 'error', message: err?.response?.data || err.message });
         }
-        
-        alert(`Sottoscrizioni completate:\n✓ Successi: ${result.success}\n✗ Fallimenti: ${result.failures}`);
-        setSelectedClasses(new Set());
-      } else {
-        alert('Errore nelle sottoscrizioni');
       }
+
+      const successCount = results.filter(r => r.status === 'success').length;
+      const failureCount = results.length - successCount;
+      alert(`Sottoscrizioni completate:\n✓ Successi: ${successCount}\n✗ Fallimenti: ${failureCount}`);
+      setSelectedClasses(new Set());
     } catch (err) {
       alert('Errore di connessione: ' + err.message);
     } finally {
@@ -105,21 +104,23 @@ function ClassSubscription({ user }) {
 
     setSubscribing(true);
     try {
-      const response = await fetch('/api/classes/unsubscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          classIds: Array.from(selectedClasses)
-        })
-      });
+      const username = user?.username || 'default-user';
+      const results = [];
 
-      if (response.ok) {
-        const result = await response.json();
-        alert(`Annullamenti completati:\n✓ Successi: ${result.success}\n✗ Fallimenti: ${result.failures}`);
-        setSelectedClasses(new Set());
-      } else {
-        alert('Errore negli annullamenti');
+      for (const classId of Array.from(selectedClasses)) {
+        try {
+          await subscriptions.deleteByClassId(username, classId);
+          results.push({ classId, status: 'success' });
+        } catch (err) {
+          console.error('Unsubscribe failed for', classId, err);
+          results.push({ classId, status: 'error', message: err?.response?.data || err.message });
+        }
       }
+
+      const successCount = results.filter(r => r.status === 'success').length;
+      const failureCount = results.length - successCount;
+      alert(`Annullamenti completati:\n✓ Successi: ${successCount}\n✗ Fallimenti: ${failureCount}`);
+      setSelectedClasses(new Set());
     } catch (err) {
       alert('Errore di connessione: ' + err.message);
     } finally {

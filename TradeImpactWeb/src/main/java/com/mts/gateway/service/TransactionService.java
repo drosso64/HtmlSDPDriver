@@ -38,9 +38,9 @@ public class TransactionService {
      * @param request Transaction request
      * @return Transaction response
      */
-    public TransactionResponse executeTransaction(TransactionRequest request) throws Exception {
-        log.info("Executing transaction: classId={} action={}", 
-            request.getClassId(), request.getAction());
+    public TransactionResponse executeTransaction(String market, TransactionRequest request) throws Exception {
+        log.info("Executing transaction for market {}: classId={} action={}", 
+            market, request.getClassId(), request.getAction());
         
         // Get connection from transaction pool
         SDPConnection connection = connectionPool.getTransactionConnection();
@@ -74,9 +74,9 @@ public class TransactionService {
      * @param request Transaction request
      * @return Transaction response with monitoring ID
      */
-    public TransactionResponse executeMonitoredTransaction(TransactionRequest request) throws Exception {
-        log.info("Executing monitored transaction: classId={} action={}", 
-            request.getClassId(), request.getAction());
+    public TransactionResponse executeMonitoredTransaction(String market, TransactionRequest request) throws Exception {
+        log.info("Executing monitored transaction for market {}: classId={} action={}", 
+            market, request.getClassId(), request.getAction());
         
         SDPConnection connection = connectionPool.getTransactionConnection();
         if (connection == null) {
@@ -85,7 +85,7 @@ public class TransactionService {
         
         try {
             SMPMessage smpMessage = createSMPMessage(request);
-            
+
             CompletableFuture<TransactionResponse> responseFuture = 
                 connection.sendMonitoredTransaction(smpMessage, request.getAction().name());
             
@@ -114,9 +114,9 @@ public class TransactionService {
      * @param request Transaction request
      * @return Transaction response
      */
-    public TransactionResponse executeExtendedTransaction(TransactionRequest request) throws Exception {
-        log.info("Executing extended transaction: classId={} action={}", 
-            request.getClassId(), request.getAction());
+    public TransactionResponse executeExtendedTransaction(String market, TransactionRequest request) throws Exception {
+        log.info("Executing extended transaction for market {}: classId={} action={}", 
+            market, request.getClassId(), request.getAction());
         
         SDPConnection connection = connectionPool.getTransactionConnection();
         if (connection == null) {

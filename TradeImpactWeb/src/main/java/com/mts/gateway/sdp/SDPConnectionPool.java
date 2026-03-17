@@ -355,7 +355,8 @@ public class SDPConnectionPool {
                         serviceInfo.getAddress(),
                         serviceInfo.getPort(),
                         username,
-                        password
+                        password,
+                        String.valueOf(targetPlatformId)
                     );
                     connectionPools.get(serviceType).offer(connection);
                     log.info("Created connection {} for service {} (market {})", 
@@ -389,12 +390,13 @@ public class SDPConnectionPool {
     /**
      * Create a connection to a specific market service
      */
-    private SDPConnection createConnectionToMarket(
+        private SDPConnection createConnectionToMarket(
             String serviceType, 
             String address, 
             int port,
             String username,
-            String password) throws Exception {
+            String password,
+            String market) throws Exception {
         String connectionId = java.util.UUID.randomUUID().toString();
         
         // Trim address to remove any whitespace or special characters
@@ -410,7 +412,7 @@ public class SDPConnectionPool {
             marketFactory,
             config.getIpsp().getSsl()
         );
-        
+        connection.setMarket(market);
         connection.setWebSocketHandler(webSocketHandler);
         connection.connect();
         

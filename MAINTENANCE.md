@@ -19,7 +19,7 @@ SMPMessageSerializer.java (converte a JSON)
         ↓
     MarketDataWebSocketHandler.java (broadcast)
         ↓
-    WebSocket (ws://localhost:8080/ws/marketdata)
+    WebSocket (ws://localhost:8080/ws/{market})
         ↓
     WebSocketContext.jsx (React Context)
         ↓
@@ -199,7 +199,7 @@ L'ordine delle colonne nel browser **seguirà automaticamente** l'ordine dei fie
 ### "WebSocket non si connette"
 
 1. **Console browser** (F12 → Network → WS):
-   - Vedi tentativo connessione a `ws://localhost:8081/ws/marketdata`?
+    - Vedi tentativo connessione a `ws://localhost:8081/ws/{market}`?
    - Status: 101 Switching Protocols → OK
    - Status: 404 / 500 → problema backend
 

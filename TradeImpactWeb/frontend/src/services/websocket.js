@@ -15,7 +15,8 @@ class WebSocketService {
 
     this.isConnecting = true;
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const url = `${protocol}//${window.location.host}/ws/marketdata`;
+    const market = localStorage.getItem('market') || 'BV';
+    const url = `${protocol}//${window.location.host}/ws/${encodeURIComponent(market)}`;
 
     try {
       this.ws = new WebSocket(url);

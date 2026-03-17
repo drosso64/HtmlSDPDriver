@@ -76,8 +76,8 @@ Applicazione web per la visualizzazione e gestione di dati di mercato in tempo r
 useEffect(() => {
     const token = localStorage.getItem('authToken');
     const wsUrl = token
-        ? `ws://localhost:8081/ws/marketdata?token=${encodeURIComponent(token)}`
-        : 'ws://localhost:8081/ws/marketdata';
+        ? `ws://localhost:8081/ws/${encodeURIComponent(market)}?token=${encodeURIComponent(token)}`
+        : `ws://localhost:8081/ws/${encodeURIComponent(market)}`;
   const socket = new WebSocket(wsUrl);
   
   socket.onmessage = (event) => {
@@ -341,7 +341,7 @@ function RecordDetailModal({ record, onAction, isNewRecord }) {
 
 ```java
 // TransactionController.java
-@PostMapping("/api/transactions/monitored")
+@PostMapping("/api/markets/{market}/transactions")
 public ResponseEntity<TransactionResponse> executeMonitoredTransaction(
         @RequestBody TransactionRequest request) {
     // 1. Validazione request
@@ -451,7 +451,7 @@ Frontend renderizza colonne nello stesso ordine visibile nel codice sorgente.
 ## Debug e Troubleshooting
 
 ### WebSocket Non Si Connette
-1. Verifica URL: `ws://localhost:8081/ws/marketdata` (host) / `ws://<container>:8080/ws/marketdata` (interno)
+1. Verifica URL: `ws://localhost:8081/ws/{market}` (host) / `ws://<container>:8080/ws/{market}` (interno)
 2. Controlla CORS in `WebSocketConfig.java`
 3. Verifica token `authToken` in localStorage e query string `?token=...`
 4. Il frontend mostra uno spinner di attesa durante la connessione WebSocket (UX migliorata).

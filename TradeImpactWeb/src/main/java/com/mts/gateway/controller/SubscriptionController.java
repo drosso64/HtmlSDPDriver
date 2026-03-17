@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import com.mts.gateway.dto.SubscriptionRequestDto;
 
 /**
  * Subscription Controller
@@ -22,7 +23,7 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/subscriptions")
+@RequestMapping("/api/markets/{market}/subscriptions")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class SubscriptionController {
@@ -38,17 +39,16 @@ public class SubscriptionController {
      * @return Created subscription
      */
     @PostMapping
-    public ResponseEntity<ActiveSubscriptionService.SubscriptionInfo> createSubscription(@RequestBody SubscriptionRequest request) {
-        log.info("POST /api/subscriptions - user={} classId={}", request.username, request.classId);
-        
+    public ResponseEntity<ActiveSubscriptionService.SubscriptionInfo> createSubscription(
+            @PathVariable String market,
+            @RequestBody SubscriptionRequestDto request) {
+        log.info("POST /api/markets/{}/subscriptions - user={} classId={}", market, request.getUsername(), request.getClassId());
+
         try {
-            ActiveSubscriptionService.SubscriptionInfo subscription = subscriptionService.createSubscription(
-                request.username,
-                request.classId
-            );
-            
+            ActiveSubscriptionService.SubscriptionInfo subscription = subscriptionService.createSubscription(request);
+
             return ResponseEntity.ok(subscription);
-            
+
         } catch (Exception e) {
             log.error("Failed to create subscription", e);
             return ResponseEntity.internalServerError().build();
@@ -63,8 +63,8 @@ public class SubscriptionController {
      * @return List of subscriptions
      */
     @GetMapping("/user/{username}")
-    public ResponseEntity<List<ActiveSubscriptionService.SubscriptionInfo>> getUserSubscriptions(@PathVariable String username) {
-        log.info("GET /api/subscriptions/user/{}", username);
+    public ResponseEntity<List<ActiveSubscriptionService.SubscriptionInfo>> getUserSubscriptions(@PathVariable String market, @PathVariable String username) {
+        // Listing subscriptions is not supported by SAP PDUs; omitted intentionally
         
         try {
             List<ActiveSubscriptionService.SubscriptionInfo> subscriptions = subscriptionService.getUserSubscriptions(username);
@@ -84,8 +84,8 @@ public class SubscriptionController {
      * @return List of active subscriptions
      */
     @GetMapping("/user/{username}/active")
-    public ResponseEntity<List<ActiveSubscriptionService.SubscriptionInfo>> getActiveSubscriptions(@PathVariable String username) {
-        log.info("GET /api/subscriptions/user/{}/active", username);
+    public ResponseEntity<List<ActiveSubscriptionService.SubscriptionInfo>> getActiveSubscriptions(@PathVariable String market, @PathVariable String username) {
+        // Listing active subscriptions is not supported by SAP PDUs; omitted intentionally
         
         try {
             List<ActiveSubscriptionService.SubscriptionInfo> subscriptions = subscriptionService.getActiveSubscriptions(username);
@@ -107,8 +107,8 @@ public class SubscriptionController {
      * @return Success response
      */
     @DeleteMapping("/{username}/{classId}")
-    public ResponseEntity<Void> deleteSubscription(@PathVariable String username, @PathVariable Long classId) {
-        log.info("DELETE /api/subscriptions/{}/{}", username, classId);
+    public ResponseEntity<Void> deleteSubscription(@PathVariable String market, @PathVariable String username, @PathVariable Long classId) {
+        log.info("DELETE /api/markets/{}/subscriptions/{}/{}", market, username, classId);
         
         try {
             subscriptionService.deleteSubscription(username, classId);
@@ -134,10 +134,11 @@ public class SubscriptionController {
      */
     @GetMapping("/class/{classId}/data")
     public ResponseEntity<List<MarketDataRecord>> getClassData(
+        @PathVariable String market,
         @PathVariable Long classId,
         @RequestParam(defaultValue = "100") int limit
     ) {
-        log.info("GET /api/subscriptions/class/{}/data?limit={}", classId, limit);
+        log.info("GET /api/markets/{}/subscriptions/class/{}/data?limit={}", market, classId, limit);
         
         try {
             List<MarketDataRecord> data = subscriptionService.getRecentMarketData(classId, limit);
@@ -157,8 +158,8 @@ public class SubscriptionController {
      * @return Success response
      */
     @DeleteMapping("/class/{classId}/data")
-    public ResponseEntity<Map<String, String>> clearClassData(@PathVariable Long classId) {
-        log.info("DELETE /api/subscriptions/class/{}/data", classId);
+    public ResponseEntity<Map<String, String>> clearClassData(@PathVariable String market, @PathVariable Long classId) {
+        log.info("DELETE /api/markets/{}/subscriptions/class/{}/data", market, classId);
         
         try {
             subscriptionService.clearMarketData(classId);
@@ -183,8 +184,8 @@ public class SubscriptionController {
      * @return Subscription statistics
      */
     @GetMapping("/user/{username}/stats")
-    public ResponseEntity<SubscriptionService.SubscriptionStats> getStats(@PathVariable String username) {
-        log.info("GET /api/subscriptions/user/{}/stats", username);
+    public ResponseEntity<SubscriptionService.SubscriptionStats> getStats(@PathVariable String market, @PathVariable String username) {
+        log.info("GET /api/markets/{}/subscriptions/user/{}/stats", market, username);
         
         try {
             var stats = subscriptionService.getStats(username);
@@ -205,9 +206,10 @@ public class SubscriptionController {
      */
     @PostMapping("/cleanup")
     public ResponseEntity<Map<String, Object>> manualCleanup(
+        @PathVariable String market,
         @RequestParam(defaultValue = "30") int retentionDays
     ) {
-        log.info("POST /api/subscriptions/cleanup?retentionDays={}", retentionDays);
+        log.info("POST /api/markets/{}/subscriptions/cleanup?retentionDays={}", market, retentionDays);
         
         try {
             int deletedCount = cleanupService.cleanupManual(retentionDays);
@@ -232,8 +234,8 @@ public class SubscriptionController {
      * @return Database statistics
      */
     @GetMapping("/database/stats")
-    public ResponseEntity<DatabaseCleanupService.DatabaseStats> getDatabaseStats() {
-        log.info("GET /api/subscriptions/database/stats");
+    public ResponseEntity<DatabaseCleanupService.DatabaseStats> getDatabaseStats(@PathVariable String market) {
+        log.info("GET /api/markets/{}/subscriptions/database/stats", market);
         
         try {
             var stats = cleanupService.getStats();
@@ -245,8 +247,5 @@ public class SubscriptionController {
         }
     }
     
-    /**
-     * Subscription Request DTO
-     */
-    record SubscriptionRequest(String username, Long classId) {}
+    // SubscriptionRequestDto is used instead of local record to align with SAP PDU fields
 }

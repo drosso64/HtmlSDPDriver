@@ -21,6 +21,11 @@ public class TransactionRequest {
      * Il backend fa lookup del className via ClassMetadataRepository.
      */
     private Long classId;
+
+    /**
+     * Market identifier (e.g., BV, BVF). REQUIRED per proxy requirements.
+     */
+    private String market;
     
     /**
      * Transaction action

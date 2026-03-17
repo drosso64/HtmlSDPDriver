@@ -1,0 +1,13 @@
+markets:
+  - id: BV
+    name: BorsaValori
+  - id: BVF
+    name: BorsaValoriFast
+
+ipsps:
+  - host: 127.0.0.1
+    port: 8800
+    ssl: false
+  - host: 10.0.0.5
+    port: 8443
+    ssl: true
